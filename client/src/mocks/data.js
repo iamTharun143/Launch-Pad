@@ -139,7 +139,8 @@ function advanceSimulatedDeployments() {
       continue
     }
     deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
-    deployment.finishedAt = new Date(startedAt + BUILD_MS).toISOString()
+    // Every fake build "takes" BUILD_MS, counted from when the deployment was created.
+    deployment.finishedAt = new Date(new Date(deployment.createdAt).getTime() + BUILD_MS).toISOString()
     if (project.name.includes('broken')) {
       deployment.status = 'FAILED'
     } else {
