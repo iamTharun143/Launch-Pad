@@ -182,7 +182,7 @@ export default function ProjectDetail() {
             {canManageTeam && (
               <Link
                 to={`/projects/${project.id}/team`}
-                className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium hover:bg-gray-100"
+                className="flex-1 whitespace-nowrap rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium hover:bg-gray-100"
               >
                 Team settings
               </Link>
@@ -191,7 +191,7 @@ export default function ProjectDetail() {
               <button
                 onClick={handleDeploy}
                 disabled={deploying}
-                className="flex-1 rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex-1 whitespace-nowrap rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deploying ? 'Deploying…' : 'Deploy'}
               </button>

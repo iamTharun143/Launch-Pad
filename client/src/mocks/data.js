@@ -2,11 +2,20 @@
 // Used until the real API (Role B) is ready; on Day 3 the pages switch to src/api.js.
 // Each export is named after the endpoint whose response it imitates.
 
+// Fake avatars: a coloured circle with the first letter, drawn as an inline SVG.
+// (Real GitHub avatar URLs would show real people's photos in screenshots.)
+const AVATAR_COLORS = ['#4f46e5', '#d97706', '#059669', '#db2777', '#0891b2']
+export function fakeAvatar(username, id) {
+  const color = AVATAR_COLORS[id % AVATAR_COLORS.length]
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="${color}"/><text x="20" y="26" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#fff" text-anchor="middle">${username[0].toUpperCase()}</text></svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
 // ---- users (GET /api/me returns one of these) ----
 export const users = [
-  { id: 1, githubId: 1001, username: 'ajay-dev', avatarUrl: 'https://avatars.githubusercontent.com/u/1001', createdAt: '2026-11-01T09:00:00.000Z' },
-  { id: 2, githubId: 1002, username: 'teammate-b', avatarUrl: 'https://avatars.githubusercontent.com/u/1002', createdAt: '2026-11-01T09:05:00.000Z' },
-  { id: 3, githubId: 1003, username: 'viewer-friend', avatarUrl: 'https://avatars.githubusercontent.com/u/1003', createdAt: '2026-11-01T09:10:00.000Z' },
+  { id: 1, githubId: 1001, username: 'ajay-dev', avatarUrl: fakeAvatar('ajay-dev', 1), createdAt: '2026-11-01T09:00:00.000Z' },
+  { id: 2, githubId: 1002, username: 'teammate-b', avatarUrl: fakeAvatar('teammate-b', 2), createdAt: '2026-11-01T09:05:00.000Z' },
+  { id: 3, githubId: 1003, username: 'viewer-friend', avatarUrl: fakeAvatar('viewer-friend', 3), createdAt: '2026-11-01T09:10:00.000Z' },
 ]
 
 // The logged-in user while we use fake data.
@@ -187,9 +196,16 @@ function advanceSimulatedDeployments() {
   }
 }
 
-// The two unfinished sample deployments (todo-app) finish soon after page load.
-simulated.set(4, { startedAt: Date.now() - 5000, emitted: 0 })
-simulated.set(5, { startedAt: Date.now(), emitted: 0 })
+// The two unfinished sample deployments (todo-app) run soon after page load,
+// one after the other like the real worker (one build at a time):
+// #4 is half-way through its build, #5 waits in the queue and starts when #4 is done.
+const pageLoadedAt = Date.now()
+const startSample = (id, startedAt) => {
+  deployments.find((d) => d.id === id).createdAt = new Date(startedAt).toISOString()
+  simulated.set(id, { startedAt, emitted: 0 })
+}
+startSample(4, pageLoadedAt - 5000) // building now, READY 5 s after load
+startSample(5, pageLoadedAt + 2000) // QUEUED until #4 finishes, READY 12 s after load
 
 // POST /api/projects/:id/deployments -> new QUEUED deployment
 export function addDeployment(projectId, userId = me.id) {
@@ -244,7 +260,7 @@ export function addMember(projectId, username, role) {
   let user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
   if (!user) {
     const id = Math.max(...users.map((u) => u.id)) + 1
-    user = { id, githubId: 1000 + id, username, avatarUrl: `https://avatars.githubusercontent.com/u/${1000 + id}`, createdAt: new Date().toISOString() }
+    user = { id, githubId: 1000 + id, username, avatarUrl: fakeAvatar(username, id), createdAt: new Date().toISOString() }
     users.push(user)
   }
   if (members.some((m) => m.projectId === Number(projectId) && m.userId === user.id)) return null
