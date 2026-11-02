@@ -119,7 +119,7 @@ export default function ProjectDetail() {
       <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-2xl font-bold">{project.name}</h1>
+            <h1 className="text-2xl font-bold break-all">{project.name}</h1>
             {role && <RoleBadge role={role} />}
           </div>
           <div className="mt-1 flex flex-col gap-1 text-sm sm:flex-row sm:gap-4">
