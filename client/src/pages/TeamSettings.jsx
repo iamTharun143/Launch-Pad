@@ -158,7 +158,8 @@ export default function TeamSettings() {
                 {isMe ? (
                   <RoleBadge role={member.role} />
                 ) : (
-                  <div className="flex items-center gap-2">
+                  // On phones this takes the full width (its own line), so names aren't cut off.
+                  <div className="flex w-full items-center gap-2 pl-12 sm:w-auto sm:pl-0">
                     <label className="sr-only" htmlFor={`role-${member.id}`}>
                       Role for {member.user.username}
                     </label>
@@ -167,7 +168,7 @@ export default function TeamSettings() {
                       value={member.role}
                       disabled={saving}
                       onChange={(e) => handleRoleChange(member, e.target.value)}
-                      className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
+                      className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60 sm:flex-none"
                     >
                       {ROLE_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
