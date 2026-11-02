@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { createDeployment, getDeployments, getErrorMessage, getProject } from '../api.js'
-import { useAuth } from '../auth/useAuth.js'
+import { createDeployment, getDeployments, getErrorMessage, getProject, rollback } from '../api.js'
+import { useRole } from '../auth/useRole.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
 import LogViewer from '../components/LogViewer.jsx'
 import { duration, liveUrl, shortSha, timeAgo } from '../utils.js'
@@ -12,7 +12,6 @@ const isRunning = (d) => d.status === 'QUEUED' || d.status === 'BUILDING'
 
 export default function ProjectDetail() {
   const { id } = useParams()
-  const { user } = useAuth()
   // The selected deployment lives in the URL (?deployment=7), so refresh keeps it.
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -24,6 +23,12 @@ export default function ProjectDetail() {
 
   const [deploying, setDeploying] = useState(false)
   const [deployError, setDeployError] = useState('')
+
+  const [rollingBackId, setRollingBackId] = useState(null) // deployment being made live
+  const [rollbackError, setRollbackError] = useState('')
+
+  // My role and what it lets me do. Hides buttons only; the server still checks.
+  const { role, canDeploy, canRollback, canManageTeam } = useRole(project)
 
   // 1) Load the project and its deployments when the page opens (and on Retry).
   useEffect(() => {
@@ -80,10 +85,23 @@ export default function ProjectDetail() {
     }
   }
 
+  async function handleRollback(deployment) {
+    if (!window.confirm(`Make #${deployment.id} the live version of ${project.name}?`)) return
+    setRollingBackId(deployment.id)
+    setRollbackError('')
+    try {
+      // The server answers with the updated project (new activeDeploymentId).
+      setProject(await rollback(id, deployment.id))
+    } catch (err) {
+      setRollbackError(getErrorMessage(err))
+    } finally {
+      setRollingBackId(null)
+    }
+  }
+
   if (loading) return <DetailSkeleton />
   if (error) return <DetailError error={error} onRetry={retry} />
 
-  const myRole = project.members.find((m) => m.user.id === user.id)?.role
   // triggeredBy is a user id; show the member's username when we know it.
   const usernameOf = (userId) => project.members.find((m) => m.user.id === userId)?.user.username ?? `user #${userId}`
 
@@ -102,7 +120,7 @@ export default function ProjectDetail() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-2xl font-bold">{project.name}</h1>
-            {myRole && <RoleBadge role={myRole} />}
+            {role && <RoleBadge role={role} />}
           </div>
           <div className="mt-1 flex flex-col gap-1 text-sm sm:flex-row sm:gap-4">
             {project.activeDeploymentId ? (
@@ -123,13 +141,26 @@ export default function ProjectDetail() {
         </div>
 
         <div className="flex shrink-0 flex-col items-stretch gap-1 sm:items-end">
-          <button
-            onClick={handleDeploy}
-            disabled={deploying}
-            className="rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {deploying ? 'Deploying…' : 'Deploy'}
-          </button>
+          <div className="flex gap-2">
+            {canManageTeam && (
+              <Link
+                to={`/projects/${project.id}/team`}
+                className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium hover:bg-gray-100"
+              >
+                Team settings
+              </Link>
+            )}
+            {canDeploy && (
+              <button
+                onClick={handleDeploy}
+                disabled={deploying}
+                className="flex-1 rounded-md bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deploying ? 'Deploying…' : 'Deploy'}
+              </button>
+            )}
+          </div>
+          {!canDeploy && <p className="text-sm text-gray-500">You have view-only access</p>}
           {deployError && (
             <p role="alert" className="text-xs text-red-600">
               {deployError}
@@ -152,10 +183,17 @@ export default function ProjectDetail() {
 
       {/* Deployment history */}
       <h2 className="mt-8 mb-3 text-lg font-semibold">Deployments</h2>
+      {rollbackError && (
+        <p role="alert" className="mb-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          Rollback failed: {rollbackError}
+        </p>
+      )}
       {deployments.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
           <p className="font-medium">No deployments yet</p>
-          <p className="mt-1 text-sm text-gray-500">Click Deploy to build this project and put it online.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {canDeploy ? 'Click Deploy to build this project and put it online.' : 'An Owner or Developer needs to deploy it first.'}
+          </p>
         </div>
       ) : (
         <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -167,6 +205,10 @@ export default function ProjectDetail() {
               isSelected={d.id === selected?.id}
               onSelect={() => selectDeployment(d.id)}
               triggeredBy={usernameOf(d.triggeredBy)}
+              // Rollback: any READY deployment that isn't live, if my role allows it.
+              canRollBack={canRollback && d.status === 'READY' && d.id !== project.activeDeploymentId}
+              rollingBack={rollingBackId === d.id}
+              onRollback={() => handleRollback(d)}
             />
           ))}
         </ul>
@@ -175,17 +217,16 @@ export default function ProjectDetail() {
   )
 }
 
-function DeploymentRow({ deployment, isLive, isSelected, onSelect, triggeredBy }) {
+function DeploymentRow({ deployment, isLive, isSelected, onSelect, triggeredBy, canRollBack, rollingBack, onRollback }) {
   const { id, status, commitSha, createdAt, finishedAt } = deployment
   return (
-    <li>
-      {/* A button so the row works with keyboard (Tab + Enter) as well as mouse. */}
+    // Two buttons side by side (a button can't contain another button):
+    // the row itself shows the logs, the small one on the right rolls back.
+    <li className={`flex items-center ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
       <button
         onClick={onSelect}
         aria-current={isSelected}
-        className={`flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-left ${
-          isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'
-        }`}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-left"
       >
         <div className="w-24">
           <StatusBadge status={status} />
@@ -205,6 +246,15 @@ function DeploymentRow({ deployment, isLive, isSelected, onSelect, triggeredBy }
           {finishedAt && <span> · {duration(createdAt, finishedAt)}</span>}
         </div>
       </button>
+      {canRollBack && (
+        <button
+          onClick={onRollback}
+          disabled={rollingBack}
+          className="mr-3 shrink-0 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-gray-100 disabled:opacity-60"
+        >
+          {rollingBack ? 'Rolling back…' : 'Rollback'}
+        </button>
+      )}
     </li>
   )
 }
