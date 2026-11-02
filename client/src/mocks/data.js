@@ -64,19 +64,36 @@ export const logs = [
 
 const findUser = (userId) => users.find((u) => u.id === userId)
 
-// GET /api/projects -> projects I'm a member of, with my role
+// GET /api/projects -> projects I'm a member of, with my role and newest deployment
 export function getMyProjects(userId = me.id) {
   return members
     .filter((m) => m.userId === userId)
     .map((m) => {
       const project = projects.find((p) => p.id === m.projectId)
-      const active = deployments.find((d) => d.id === project.activeDeploymentId)
+      const latest = getDeployments(project.id)[0]
       return {
         ...project,
         role: m.role,
-        activeDeployment: active ? { id: active.id, status: active.status } : null,
+        latestDeployment: latest ? { id: latest.id, status: latest.status } : null,
       }
     })
+}
+
+// POST /api/projects -> new project; the creator becomes OWNER.
+// Only lives in memory, so it disappears when the page reloads.
+export function addProject({ name, repoUrl, buildCommand, outputDir }, userId = me.id) {
+  const project = {
+    id: Math.max(...projects.map((p) => p.id)) + 1,
+    name,
+    repoUrl,
+    buildCommand,
+    outputDir,
+    activeDeploymentId: null,
+    createdAt: new Date().toISOString(),
+  }
+  projects.push(project)
+  members.push({ id: Math.max(...members.map((m) => m.id)) + 1, projectId: project.id, userId, role: 'OWNER' })
+  return project
 }
 
 // GET /api/projects/:id -> project + members (each with its user)

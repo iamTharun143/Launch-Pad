@@ -56,7 +56,8 @@ A non-member gets 403 for everything in that project.
 
 - Callback token handoff: the client assumes `/auth/callback?token=<JWT>`.
 - Exact JSON shape of `GET /api/projects` items: the client assumes each project
-  object has its fields plus `role` and `activeDeployment` (`{ id, status }` or `null`).
+  object has its fields plus `role` and `latestDeployment` (the newest deployment as
+  `{ id, status }`, or `null`). The dashboard shows its status as the project badge.
 - `GET /api/projects/:id` members: the client assumes each member includes
   `user: { id, username, avatarUrl }`.
 - `POST /api/projects/:id/rollback` body: the client assumes `{ "deploymentId": <id> }`.
