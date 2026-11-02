@@ -7,6 +7,7 @@ import LogViewer from '../components/LogViewer.jsx'
 import { describeLoadError, duration, liveUrl, shortSha, timeAgo } from '../utils.js'
 import { usePageTitle } from '../usePageTitle.js'
 import { EmptyState, ErrorState } from '../components/States.jsx'
+import ExternalIcon from '../components/ExternalIcon.jsx'
 
 // While a deployment is QUEUED or BUILDING, re-check every 2 s (same pace as the logs).
 const POLL_MS = 2000
@@ -22,6 +23,16 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null) // { status, message }
   const [attempt, setAttempt] = useState(0) // bumped by Retry
+
+  // Opened a different project on the same page (new :id)? Start over with the loading state.
+  const [shownId, setShownId] = useState(id)
+  if (id !== shownId) {
+    setShownId(id)
+    setLoading(true)
+    setError(null)
+    setProject(null)
+    setDeployments([])
+  }
 
   const [deploying, setDeploying] = useState(false)
   const [deployError, setDeployError] = useState('')
@@ -114,7 +125,7 @@ export default function ProjectDetail() {
 
   return (
     <div>
-      <Link to="/dashboard" className="text-sm text-gray-500 hover:text-gray-900">
+      <Link to="/dashboard" className="-my-1.5 inline-block py-1.5 text-sm text-gray-500 hover:text-gray-900">
         ← Back to projects
       </Link>
 
@@ -125,15 +136,21 @@ export default function ProjectDetail() {
             <h1 className="text-2xl font-bold break-all">{project.name}</h1>
             {role && <RoleBadge role={role} />}
           </div>
-          <div className="mt-1 flex flex-col gap-1 text-sm sm:flex-row sm:gap-4">
+          <div className="mt-1 flex flex-col text-sm sm:flex-row sm:gap-4">
             {project.activeDeploymentId ? (
-              <a href={liveUrl(project.name)} target="_blank" rel="noreferrer" className="truncate font-medium text-indigo-600 hover:underline">
-                {project.name}.localhost:8000 ↗
+              <a
+                href={liveUrl(project.name)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-w-0 items-center gap-1 py-1 font-medium text-indigo-600 hover:underline"
+              >
+                <span className="truncate">{project.name}.localhost:8000</span>
+                <ExternalIcon />
               </a>
             ) : (
-              <span className="text-gray-400">Not live yet</span>
+              <span className="py-1 text-gray-500">Not live yet</span>
             )}
-            <a href={project.repoUrl} target="_blank" rel="noreferrer" className="truncate text-gray-500 hover:text-gray-900">
+            <a href={project.repoUrl} target="_blank" rel="noreferrer" className="truncate py-1 text-gray-500 hover:text-gray-900">
               {project.repoUrl.replace('https://', '')}
             </a>
           </div>

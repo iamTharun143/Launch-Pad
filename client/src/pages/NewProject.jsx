@@ -91,7 +91,7 @@ export default function NewProject() {
 
   return (
     <div className="mx-auto max-w-lg">
-      <Link to="/dashboard" className="text-sm text-gray-500 hover:text-gray-900">
+      <Link to="/dashboard" className="-my-1.5 inline-block py-1.5 text-sm text-gray-500 hover:text-gray-900">
         ← Back to projects
       </Link>
       <h1 className="mt-2 mb-6 text-2xl font-bold">New Project</h1>

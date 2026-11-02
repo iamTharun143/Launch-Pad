@@ -99,12 +99,12 @@ function ProjectCard({ project }) {
           href={liveUrl(project.name)}
           target="_blank"
           rel="noreferrer"
-          className="relative z-10 mt-1 block truncate text-sm text-indigo-600 hover:underline"
+          className="relative z-10 mt-0.5 block truncate py-1 text-sm text-indigo-600 hover:underline"
         >
           {project.name}.localhost:8000
         </a>
       ) : (
-        <p className="mt-1 text-sm text-gray-400">Not live yet</p>
+        <p className="mt-0.5 py-1 text-sm text-gray-500">Not live yet</p>
       )}
       <div className="mt-4">
         <StatusBadge status={project.latestDeployment?.status ?? null} />

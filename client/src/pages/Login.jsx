@@ -35,7 +35,7 @@ export default function Login() {
                 Continue as {u.username}
               </a>
             ))}
-            <p className="pt-1 text-xs text-gray-400">Mock mode: pick a fake user to test their role</p>
+            <p className="pt-1 text-xs text-gray-500">Mock mode: pick a fake user to test their role</p>
           </div>
         ) : (
           <a

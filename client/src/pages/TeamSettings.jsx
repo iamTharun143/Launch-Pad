@@ -26,6 +26,15 @@ export default function TeamSettings() {
   const [error, setError] = useState(null) // { status, message }
   const [attempt, setAttempt] = useState(0) // bumped by Retry
 
+  // Opened a different project on the same page (new :id)? Start over with the loading state.
+  const [shownId, setShownId] = useState(id)
+  if (id !== shownId) {
+    setShownId(id)
+    setLoading(true)
+    setError(null)
+    setProject(null)
+  }
+
   const [savingId, setSavingId] = useState(null) // member whose row is saving
   const [rowError, setRowError] = useState(null) // { memberId, message }
 
@@ -76,7 +85,7 @@ export default function TeamSettings() {
   }
 
   const backLink = (
-    <Link to={`/projects/${id}`} className="text-sm text-gray-500 hover:text-gray-900">
+    <Link to={`/projects/${id}`} className="-my-1.5 inline-block py-1.5 text-sm text-gray-500 hover:text-gray-900">
       ← Back to project
     </Link>
   )
