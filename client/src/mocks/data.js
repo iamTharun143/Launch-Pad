@@ -52,8 +52,6 @@ export const logs = [
   { id: 8, deploymentId: 2, line: '$ npm run build', createdAt: '2026-11-01T14:00:20.000Z' },
   { id: 9, deploymentId: 2, line: "Error: Cannot find module './Header'", createdAt: '2026-11-01T14:00:24.000Z' },
   { id: 10, deploymentId: 2, line: 'Build failed with exit code 1', createdAt: '2026-11-01T14:00:25.000Z' },
-  { id: 11, deploymentId: 4, line: 'Cloning https://github.com/teammate-b/todo-app ...', createdAt: '2026-11-02T10:00:01.000Z' },
-  { id: 12, deploymentId: 4, line: '$ npm install', createdAt: '2026-11-02T10:00:04.000Z' },
 ]
 
 // ---------------------------------------------------------------
@@ -124,21 +122,59 @@ export function getRole(projectId, userId = me.id) {
 // ---------------------------------------------------------------
 const QUEUED_MS = 3000
 const BUILD_MS = 10000
-const simulated = new Map() // deploymentId -> time it was queued (ms)
+const simulated = new Map() // deploymentId -> { startedAt (ms), emitted (log lines written so far) }
+
+// The fake build output: [ms after queueing, text]. Lines appear once their time has passed.
+function buildScript(project, deployment) {
+  const common = [
+    [3000, `Cloning ${project.repoUrl} (depth 1)...`],
+    [3600, `HEAD is now at ${deployment.commitSha}`],
+    [4200, '$ npm install'],
+    [5500, 'added 214 packages, and audited 215 packages in 6s'],
+    [6000, 'found 0 vulnerabilities'],
+    [6500, `$ ${project.buildCommand}`],
+    [7200, '> vite build'],
+    [7800, 'vite v8.3.5 building for production...'],
+    [8600, '✓ 32 modules transformed.'],
+  ]
+  if (project.name.includes('broken')) {
+    return common.concat([
+      [9200, 'error during build:'],
+      [9400, '[vite]: Rollup failed to resolve import "./Header" from "src/App.jsx".'],
+      [9800, 'Build failed: command exited with code 1'],
+      [10000, `Deployment #${deployment.id} FAILED`],
+    ])
+  }
+  return common.concat([
+    [9200, `${project.outputDir}/index.html                 0.45 kB`],
+    [9500, '✓ built in 1.62s'],
+    [9800, `Copied ${project.outputDir}/ to deployments/${deployment.id}/`],
+    [10000, `Deployment #${deployment.id} is READY`],
+  ])
+}
 
 function advanceSimulatedDeployments() {
   const now = Date.now()
-  for (const [id, startedAt] of simulated) {
+  for (const [id, sim] of simulated) {
     const deployment = deployments.find((d) => d.id === id)
     const project = projects.find((p) => p.id === deployment.projectId)
-    const elapsed = now - startedAt
+    const elapsed = now - sim.startedAt
     if (elapsed < QUEUED_MS) continue
+
+    deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
+
+    // Write every log line whose time has come.
+    const script = buildScript(project, deployment)
+    while (sim.emitted < script.length && script[sim.emitted][0] <= elapsed) {
+      const [at, line] = script[sim.emitted]
+      logs.push({ id: Math.max(...logs.map((l) => l.id)) + 1, deploymentId: id, line, createdAt: new Date(sim.startedAt + at).toISOString() })
+      sim.emitted++
+    }
+
     if (elapsed < BUILD_MS) {
       deployment.status = 'BUILDING'
-      deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
       continue
     }
-    deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
     // Every fake build "takes" BUILD_MS, counted from when the deployment was created.
     deployment.finishedAt = new Date(new Date(deployment.createdAt).getTime() + BUILD_MS).toISOString()
     if (project.name.includes('broken')) {
@@ -152,8 +188,8 @@ function advanceSimulatedDeployments() {
 }
 
 // The two unfinished sample deployments (todo-app) finish soon after page load.
-simulated.set(4, Date.now() - 5000)
-simulated.set(5, Date.now())
+simulated.set(4, { startedAt: Date.now() - 5000, emitted: 0 })
+simulated.set(5, { startedAt: Date.now(), emitted: 0 })
 
 // POST /api/projects/:id/deployments -> new QUEUED deployment
 export function addDeployment(projectId, userId = me.id) {
@@ -167,7 +203,7 @@ export function addDeployment(projectId, userId = me.id) {
     finishedAt: null,
   }
   deployments.push(deployment)
-  simulated.set(deployment.id, Date.now())
+  simulated.set(deployment.id, { startedAt: Date.now(), emitted: 0 })
   return { ...deployment }
 }
 
@@ -180,7 +216,14 @@ export function getDeployments(projectId) {
     .map((d) => ({ ...d }))
 }
 
-// GET /api/deployments/:id/logs?after=<logId>
+// GET /api/deployments/:id/logs?after=<logId> -> oldest first
 export function getLogs(deploymentId, after = 0) {
-  return logs.filter((l) => l.deploymentId === Number(deploymentId) && l.id > after)
+  advanceSimulatedDeployments()
+  return logs
+    .filter((l) => l.deploymentId === Number(deploymentId) && l.id > Number(after))
+    .map((l) => ({ ...l }))
 }
+
+// Which project a deployment belongs to (the real API checks membership this way).
+export const getDeploymentProjectId = (deploymentId) =>
+  deployments.find((d) => d.id === Number(deploymentId))?.projectId ?? null

@@ -132,4 +132,17 @@ export async function createDeployment(projectId) {
   return data
 }
 
+// GET /api/deployments/:id/logs?after=<logId> -> only lines newer than `after`, oldest first
+export async function getLogs(deploymentId, after = 0) {
+  if (USE_MOCKS) {
+    await delay(150)
+    const projectId = mock.getDeploymentProjectId(deploymentId)
+    if (!projectId) throw mockError(404, 'Deployment not found')
+    if (!mock.getRole(projectId)) throw mockError(403, 'You are not a member of this project')
+    return mock.getLogs(deploymentId, after)
+  }
+  const { data } = await api.get(`/api/deployments/${deploymentId}/logs`, { params: { after } })
+  return data
+}
+
 export default api

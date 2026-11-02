@@ -61,4 +61,6 @@ A non-member gets 403 for everything in that project.
 - `GET /api/projects/:id` members: the client assumes each member includes
   `user: { id, username, avatarUrl }`.
 - `POST /api/projects/:id/rollback` body: the client assumes `{ "deploymentId": <id> }`.
+- `GET /api/deployments/:id/logs?after=<logId>`: the client assumes a plain array of
+  `{ id, deploymentId, line, createdAt }`, oldest first, with `after=0` meaning "from the start".
 - Rollback is a Must in the Role A handbook but a Stretch in the PRD.
