@@ -190,7 +190,8 @@ function DeploymentRow({ deployment, isLive, isSelected, onSelect, triggeredBy }
         <div className="w-24">
           <StatusBadge status={status} />
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* No min-w-0 here: when space runs out, the time text wraps to its own line instead of overlapping. */}
+        <div className="flex flex-1 items-center gap-2">
           <span className="font-medium">#{id}</span>
           {commitSha && <code className="text-xs text-gray-500">{shortSha(commitSha)}</code>}
           {isLive && (
