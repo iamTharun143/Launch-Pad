@@ -13,6 +13,16 @@ import ExternalIcon from '../components/ExternalIcon.jsx'
 const POLL_MS = 2000
 const isRunning = (d) => d.status === 'QUEUED' || d.status === 'BUILDING'
 
+// Deployments first, THEN the project. The two answers can't arrive "at the same moment",
+// so this order guarantees the project (its live deployment) is never older than the list.
+// Otherwise a build could finish between the requests: the list says READY, polling stops,
+// and the Live tag would be stuck on the old deployment.
+async function fetchProjectAndDeployments(id) {
+  const deployments = await getDeployments(id)
+  const project = await getProject(id)
+  return [project, deployments]
+}
+
 export default function ProjectDetail() {
   const { id } = useParams()
   // The selected deployment lives in the URL (?deployment=7), so refresh keeps it.
@@ -46,7 +56,7 @@ export default function ProjectDetail() {
 
   // 1) Load the project and its deployments when the page opens (and on Retry).
   useEffect(() => {
-    Promise.all([getProject(id), getDeployments(id)])
+    fetchProjectAndDeployments(id)
       .then(([projectData, deploymentData]) => {
         setProject(projectData)
         setDeployments(deploymentData)
@@ -69,7 +79,7 @@ export default function ProjectDetail() {
     if (!hasRunning) return
     const timer = setInterval(() => {
       // Refresh the project too: a finished build changes activeDeploymentId.
-      Promise.all([getProject(id), getDeployments(id)])
+      fetchProjectAndDeployments(id)
         .then(([projectData, deploymentData]) => {
           setProject(projectData)
           setDeployments(deploymentData)
