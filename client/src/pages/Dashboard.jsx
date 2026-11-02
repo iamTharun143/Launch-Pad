@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom'
 import { getErrorMessage, getProjects } from '../api.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
 import { liveUrl } from '../utils.js'
+import { usePageTitle } from '../usePageTitle.js'
 
 const POLL_MS = 2000
 
 export default function Dashboard() {
+  usePageTitle('Projects')
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

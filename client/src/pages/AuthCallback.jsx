@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth.js'
 import Spinner from '../components/Spinner.jsx'
+import { usePageTitle } from '../usePageTitle.js'
 
 // The API sends the browser here after GitHub login: /auth/callback?token=<JWT>
 export default function AuthCallback() {
+  usePageTitle('Logging in')
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
   const { login } = useAuth()

@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { API_URL, USE_MOCKS, getToken } from '../api.js'
 import Logo from '../components/Logo.jsx'
 import { users as mockUsers } from '../mocks/data.js'
+import { usePageTitle } from '../usePageTitle.js'
 
 // Real mode: the button leaves our app and goes to the API, which sends the
 // user to GitHub and back to /auth/callback?token=<JWT>.
@@ -10,6 +11,7 @@ const githubLoginUrl = `${API_URL}/auth/github`
 const mockLoginUrl = (userId) => `/auth/callback?token=mock-token-${userId}`
 
 export default function Login() {
+  usePageTitle('Log in')
   // Already logged in? No need to see this page.
   if (getToken()) return <Navigate to="/dashboard" replace />
 

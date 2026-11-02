@@ -4,6 +4,7 @@ import { addMember, getErrorMessage, getProject, removeMember, updateMember } fr
 import { useAuth } from '../auth/useAuth.js'
 import { useRole } from '../auth/useRole.js'
 import { RoleBadge } from '../components/Badges.jsx'
+import { usePageTitle } from '../usePageTitle.js'
 
 const ROLE_OPTIONS = [
   { value: 'OWNER', label: 'Owner' },
@@ -27,6 +28,7 @@ export default function TeamSettings() {
   const [rowError, setRowError] = useState(null) // { memberId, message }
 
   const { canManageTeam } = useRole(project)
+  usePageTitle(project ? `Team · ${project.name}` : null)
 
   useEffect(() => {
     getProject(id)

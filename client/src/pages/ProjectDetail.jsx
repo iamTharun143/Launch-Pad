@@ -5,6 +5,7 @@ import { useRole } from '../auth/useRole.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
 import LogViewer from '../components/LogViewer.jsx'
 import { duration, liveUrl, shortSha, timeAgo } from '../utils.js'
+import { usePageTitle } from '../usePageTitle.js'
 
 // While a deployment is QUEUED or BUILDING, re-check every 2 s (same pace as the logs).
 const POLL_MS = 2000
@@ -29,6 +30,7 @@ export default function ProjectDetail() {
 
   // My role and what it lets me do. Hides buttons only; the server still checks.
   const { role, canDeploy, canRollback, canManageTeam } = useRole(project)
+  usePageTitle(project?.name)
 
   // 1) Load the project and its deployments when the page opens (and on Retry).
   useEffect(() => {

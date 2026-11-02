@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createProject, getErrorMessage, getProjects } from '../api.js'
+import { usePageTitle } from '../usePageTitle.js'
 
 const REPO_URL_PATTERN = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+?(\.git)?\/?$/
 const NAME_PATTERN = /^[a-z0-9-]{3,30}$/
@@ -23,6 +24,7 @@ function validate(form, takenNames) {
 }
 
 export default function NewProject() {
+  usePageTitle('New project')
   const navigate = useNavigate()
   const [form, setForm] = useState({ repoUrl: '', name: '', buildCommand: 'npm run build', outputDir: 'dist' })
   // Which fields the user has left at least once; we only show their errors after that.
