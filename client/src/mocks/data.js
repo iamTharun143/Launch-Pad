@@ -277,3 +277,15 @@ export function setActiveDeployment(projectId, deploymentId) {
   projects.find((p) => p.id === Number(projectId)).activeDeploymentId = deployment.id
   return getProject(projectId)
 }
+
+// DELETE /api/projects/:id -> removes the project and everything that belongs to it
+export function deleteProject(projectId) {
+  const id = Number(projectId)
+  const deploymentIds = deployments.filter((d) => d.projectId === id).map((d) => d.id)
+  const keep = (list, test) => list.splice(0, list.length, ...list.filter(test))
+  keep(logs, (l) => !deploymentIds.includes(l.deploymentId))
+  keep(deployments, (d) => d.projectId !== id)
+  keep(members, (m) => m.projectId !== id)
+  keep(projects, (p) => p.id !== id)
+  deploymentIds.forEach((d) => simulated.delete(d))
+}

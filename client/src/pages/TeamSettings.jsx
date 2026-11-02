@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { addMember, getErrorMessage, getProject, removeMember, updateMember } from '../api.js'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { addMember, deleteProject, getErrorMessage, getProject, removeMember, updateMember } from '../api.js'
 import { useAuth } from '../auth/useAuth.js'
 import { useRole } from '../auth/useRole.js'
 import { RoleBadge } from '../components/Badges.jsx'
@@ -38,7 +38,7 @@ export default function TeamSettings() {
   const [savingId, setSavingId] = useState(null) // member whose row is saving
   const [rowError, setRowError] = useState(null) // { memberId, message }
 
-  const { canManageTeam } = useRole(project)
+  const { canManageTeam, canDelete } = useRole(project)
   usePageTitle(project ? `Team · ${project.name}` : null)
 
   useEffect(() => {
@@ -197,7 +197,69 @@ export default function TeamSettings() {
       {others.length === 0 && (
         <p className="mt-3 text-center text-sm text-gray-500">Only you so far – invite a teammate above.</p>
       )}
+
+      {canDelete && <DeleteProject project={project} />}
     </div>
+  )
+}
+
+// "Danger zone": the Owner types the project name to unlock the Delete button,
+// so a project can't be deleted by one accidental click.
+function DeleteProject({ project }) {
+  const navigate = useNavigate()
+  const [confirmName, setConfirmName] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+  const matches = confirmName === project.name
+
+  async function handleDelete(event) {
+    event.preventDefault()
+    if (!matches) return
+    setDeleting(true)
+    setError('')
+    try {
+      await deleteProject(project.id)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(getErrorMessage(err))
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleDelete} className="mt-10 rounded-xl border border-red-200 bg-white p-4">
+      <h2 className="font-semibold text-red-700">Delete project</h2>
+      <p className="mt-1 text-sm text-gray-600">
+        Removes {project.name}, its deployments, logs and team, and takes {project.name}.localhost:8000 offline. This can't be undone.
+      </p>
+      <label htmlFor="confirm-name" className="mt-3 block text-sm">
+        Type <code className="rounded bg-gray-100 px-1 py-0.5 font-semibold">{project.name}</code> to confirm
+      </label>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <input
+          id="confirm-name"
+          aria-label={`Type ${project.name} to confirm`}
+          value={confirmName}
+          onChange={(e) => setConfirmName(e.target.value)}
+          autoCapitalize="none"
+          autoComplete="off"
+          spellCheck="false"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+        />
+        <button
+          type="submit"
+          disabled={!matches || deleting}
+          className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {deleting ? 'Deleting…' : 'Delete project'}
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-red-600">
+          {error}
+        </p>
+      )}
+    </form>
   )
 }
 

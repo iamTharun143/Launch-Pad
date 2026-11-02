@@ -219,4 +219,15 @@ export async function removeMember(projectId, memberId) {
   await api.delete(`/api/projects/${projectId}/members/${memberId}`)
 }
 
+// DELETE /api/projects/:id -> 204, nothing returned (Owner only)
+export async function deleteProject(projectId) {
+  if (USE_MOCKS) {
+    await delay(600)
+    mockRequireRole(projectId, ['OWNER'], 'Only the Owner can delete a project')
+    mock.deleteProject(projectId)
+    return
+  }
+  await api.delete(`/api/projects/${projectId}`)
+}
+
 export default api
