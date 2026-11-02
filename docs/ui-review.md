@@ -1,5 +1,15 @@
 # UI review – Day 6
 
+## Outcome
+
+All Must and Should items are fixed, plus D1 (Delete project) and N1, N3, N4, N5. **N2 (styled confirm
+dialogs) was skipped**: the browser's own dialog works and a custom one isn't quick.
+
+Found and fixed during the final demo run: Project detail fetched the project and its deployments in
+parallel, so the two answers could come from different moments. A Building deployment could briefly show
+as Live, and in the other order the Live tag could get stuck on the old deployment once polling stopped.
+It now fetches deployments first, then the project.
+
 Strict review of every client page at 375 px and 1280 px, as Owner, Developer and Viewer, in mock mode.
 Checked: sideways scrolling, clipped text, tap-target sizes, labels, focus, contrast, states, and the PRD demo flow.
 
