@@ -95,4 +95,41 @@ export async function createProject(project) {
   return data
 }
 
+// GET /api/projects/:id -> project + members
+export async function getProject(id) {
+  if (USE_MOCKS) {
+    await delay()
+    const project = mock.getProject(id)
+    if (!project) throw mockError(404, 'Project not found')
+    if (!mock.getRole(id)) throw mockError(403, 'You are not a member of this project')
+    return project
+  }
+  const { data } = await api.get(`/api/projects/${id}`)
+  return data
+}
+
+// GET /api/projects/:id/deployments -> newest first
+export async function getDeployments(projectId) {
+  if (USE_MOCKS) {
+    await delay(300)
+    return mock.getDeployments(projectId)
+  }
+  const { data } = await api.get(`/api/projects/${projectId}/deployments`)
+  return data
+}
+
+// POST /api/projects/:id/deployments -> new QUEUED deployment
+export async function createDeployment(projectId) {
+  if (USE_MOCKS) {
+    await delay(300)
+    const role = mock.getRole(projectId)
+    if (role !== 'OWNER' && role !== 'DEVELOPER') {
+      throw mockError(403, 'Only Owners and Developers can deploy')
+    }
+    return mock.addDeployment(projectId)
+  }
+  const { data } = await api.post(`/api/projects/${projectId}/deployments`)
+  return data
+}
+
 export default api

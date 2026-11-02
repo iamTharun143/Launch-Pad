@@ -58,7 +58,7 @@ export const logs = [
 
 // ---------------------------------------------------------------
 // Helpers that build endpoint-shaped responses from the tables above.
-// The extra fields (role, activeDeployment, user) are the shapes listed
+// The extra fields (role, latestDeployment, user) are the shapes listed
 // under "Open questions" in docs/api-contract.md; confirm them with Role B.
 // ---------------------------------------------------------------
 
@@ -98,6 +98,7 @@ export function addProject({ name, repoUrl, buildCommand, outputDir }, userId = 
 
 // GET /api/projects/:id -> project + members (each with its user)
 export function getProject(projectId) {
+  advanceSimulatedDeployments() // so activeDeploymentId is up to date
   const project = projects.find((p) => p.id === Number(projectId))
   if (!project) return null
   return {
@@ -111,11 +112,71 @@ export function getProject(projectId) {
   }
 }
 
+// My role in a project, or null if I'm not a member (the server would answer 403).
+export function getRole(projectId, userId = me.id) {
+  return members.find((m) => m.projectId === Number(projectId) && m.userId === userId)?.role ?? null
+}
+
+// ---------------------------------------------------------------
+// Fake build worker: deployments listed here move forward on their own,
+// like the real worker would: QUEUED (0-3 s) -> BUILDING (3-10 s) -> READY.
+// Projects with "broken" in the name end as FAILED instead.
+// ---------------------------------------------------------------
+const QUEUED_MS = 3000
+const BUILD_MS = 10000
+const simulated = new Map() // deploymentId -> time it was queued (ms)
+
+function advanceSimulatedDeployments() {
+  const now = Date.now()
+  for (const [id, startedAt] of simulated) {
+    const deployment = deployments.find((d) => d.id === id)
+    const project = projects.find((p) => p.id === deployment.projectId)
+    const elapsed = now - startedAt
+    if (elapsed < QUEUED_MS) continue
+    if (elapsed < BUILD_MS) {
+      deployment.status = 'BUILDING'
+      deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
+      continue
+    }
+    deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
+    deployment.finishedAt = new Date(startedAt + BUILD_MS).toISOString()
+    if (project.name.includes('broken')) {
+      deployment.status = 'FAILED'
+    } else {
+      deployment.status = 'READY'
+      project.activeDeploymentId = deployment.id
+    }
+    simulated.delete(id)
+  }
+}
+
+// The two unfinished sample deployments (todo-app) finish soon after page load.
+simulated.set(4, Date.now() - 5000)
+simulated.set(5, Date.now())
+
+// POST /api/projects/:id/deployments -> new QUEUED deployment
+export function addDeployment(projectId, userId = me.id) {
+  const deployment = {
+    id: Math.max(...deployments.map((d) => d.id)) + 1,
+    projectId: Number(projectId),
+    status: 'QUEUED',
+    commitSha: null,
+    triggeredBy: userId,
+    createdAt: new Date().toISOString(),
+    finishedAt: null,
+  }
+  deployments.push(deployment)
+  simulated.set(deployment.id, Date.now())
+  return { ...deployment }
+}
+
 // GET /api/projects/:id/deployments -> newest first
 export function getDeployments(projectId) {
+  advanceSimulatedDeployments()
   return deployments
     .filter((d) => d.projectId === Number(projectId))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map((d) => ({ ...d }))
 }
 
 // GET /api/deployments/:id/logs?after=<logId>
