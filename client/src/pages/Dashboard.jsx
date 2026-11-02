@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getErrorMessage, getProjects } from '../api.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
-
-const liveUrl = (name) => `http://${name}.localhost:8000`
+import { liveUrl } from '../utils.js'
 
 export default function Dashboard() {
   const [projects, setProjects] = useState([])
