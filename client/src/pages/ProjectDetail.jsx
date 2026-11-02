@@ -55,6 +55,13 @@ export default function ProjectDetail() {
       .finally(() => setLoading(false))
   }, [id, attempt])
 
+  // Re-draw every 30 s so times like "5 min ago" keep up while the page is open.
+  const [, setClock] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setClock((n) => n + 1), 30000)
+    return () => clearInterval(timer)
+  }, [])
+
   // 2) While something is building, refresh every POLL_MS so statuses change by themselves.
   //    When nothing is running, hasRunning becomes false and the timer is cleared.
   const hasRunning = deployments.some(isRunning)

@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/* One clear focus ring for keyboard users on every link, button and field.
+   :focus-visible only shows it for keyboard focus, not mouse clicks. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-500);
+    outline-offset: 2px;
+  }
+}

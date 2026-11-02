@@ -70,9 +70,12 @@ export default function Dashboard() {
         </EmptyState>
       ) : (
         <ProjectGrid>
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
+          {/* Newest first, so a just-created project is at the top. */}
+          {[...projects]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
         </ProjectGrid>
       )}
     </div>
@@ -87,9 +90,9 @@ function ProjectCard({ project }) {
   return (
     // "relative" + the title link's "after:" box makes the whole card clickable,
     // while the live-site link (z-10) stays clickable on its own.
-    <div className="relative rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow">
+    <div className="relative rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow has-[.card-link:focus-visible]:ring-2 has-[.card-link:focus-visible]:ring-indigo-500">
       <div className="flex items-start justify-between gap-2">
-        <Link to={`/projects/${project.id}`} className="truncate font-semibold after:absolute after:inset-0">
+        <Link to={`/projects/${project.id}`} className="card-link truncate font-semibold outline-none after:absolute after:inset-0">
           {project.name}
         </Link>
         <RoleBadge role={project.role} />
