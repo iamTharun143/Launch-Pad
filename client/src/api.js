@@ -60,13 +60,20 @@ function mockError(status, message) {
   return error
 }
 
+// Which fake user is logged in: the token is "mock-token-<userId>".
+// The plain "mock-token" from earlier days means user 1.
+function mockUserId() {
+  const match = /^mock-token-(\d+)$/.exec(getToken() ?? '')
+  return match ? Number(match[1]) : 1
+}
+
 // ---- Endpoints (see docs/api-contract.md) ----
 
 // GET /api/me
 export async function getMe() {
   if (USE_MOCKS) {
     await delay(300)
-    return mock.me
+    return mock.users.find((u) => u.id === mockUserId()) ?? mock.me
   }
   const { data } = await api.get('/api/me')
   return data
@@ -76,7 +83,7 @@ export async function getMe() {
 export async function getProjects() {
   if (USE_MOCKS) {
     await delay()
-    return mock.getMyProjects()
+    return mock.getMyProjects(mockUserId())
   }
   const { data } = await api.get('/api/projects')
   return data
@@ -89,7 +96,7 @@ export async function createProject(project) {
     if (mock.projects.some((p) => p.name === project.name)) {
       throw mockError(400, 'A project with that name already exists')
     }
-    return mock.addProject(project)
+    return mock.addProject(project, mockUserId())
   }
   const { data } = await api.post('/api/projects', project)
   return data
@@ -101,7 +108,7 @@ export async function getProject(id) {
     await delay()
     const project = mock.getProject(id)
     if (!project) throw mockError(404, 'Project not found')
-    if (!mock.getRole(id)) throw mockError(403, 'You are not a member of this project')
+    if (!mock.getRole(id, mockUserId())) throw mockError(403, 'You are not a member of this project')
     return project
   }
   const { data } = await api.get(`/api/projects/${id}`)
@@ -122,11 +129,11 @@ export async function getDeployments(projectId) {
 export async function createDeployment(projectId) {
   if (USE_MOCKS) {
     await delay(300)
-    const role = mock.getRole(projectId)
+    const role = mock.getRole(projectId, mockUserId())
     if (role !== 'OWNER' && role !== 'DEVELOPER') {
       throw mockError(403, 'Only Owners and Developers can deploy')
     }
-    return mock.addDeployment(projectId)
+    return mock.addDeployment(projectId, mockUserId())
   }
   const { data } = await api.post(`/api/projects/${projectId}/deployments`)
   return data
@@ -138,7 +145,7 @@ export async function getLogs(deploymentId, after = 0) {
     await delay(150)
     const projectId = mock.getDeploymentProjectId(deploymentId)
     if (!projectId) throw mockError(404, 'Deployment not found')
-    if (!mock.getRole(projectId)) throw mockError(403, 'You are not a member of this project')
+    if (!mock.getRole(projectId, mockUserId())) throw mockError(403, 'You are not a member of this project')
     return mock.getLogs(deploymentId, after)
   }
   const { data } = await api.get(`/api/deployments/${deploymentId}/logs`, { params: { after } })
