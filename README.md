@@ -145,6 +145,7 @@ launchpad/
 └── docs/
     ├── api-contract.md     tables + endpoints, the source of truth for both halves
     ├── architecture.svg
+    ├── demo-script.md      2-minute demo script, resume line, launch post draft
     └── screenshots/
 ```
 
