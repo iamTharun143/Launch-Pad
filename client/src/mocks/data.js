@@ -227,3 +227,53 @@ export function getLogs(deploymentId, after = 0) {
 // Which project a deployment belongs to (the real API checks membership this way).
 export const getDeploymentProjectId = (deploymentId) =>
   deployments.find((d) => d.id === Number(deploymentId))?.projectId ?? null
+
+// ---------------------------------------------------------------
+// Team members and rollback
+// ---------------------------------------------------------------
+
+const memberWithUser = (m) => {
+  const { id, username, avatarUrl } = findUser(m.userId)
+  return { ...m, user: { id, username, avatarUrl } }
+}
+
+// POST /api/projects/:id/members -> new member (with user).
+// A username that has never logged in gets a user row now, so they see
+// the project on their first login (open question for Role B).
+export function addMember(projectId, username, role) {
+  let user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
+  if (!user) {
+    const id = Math.max(...users.map((u) => u.id)) + 1
+    user = { id, githubId: 1000 + id, username, avatarUrl: `https://avatars.githubusercontent.com/u/${1000 + id}`, createdAt: new Date().toISOString() }
+    users.push(user)
+  }
+  if (members.some((m) => m.projectId === Number(projectId) && m.userId === user.id)) return null
+  const member = { id: Math.max(...members.map((m) => m.id)) + 1, projectId: Number(projectId), userId: user.id, role }
+  members.push(member)
+  return memberWithUser(member)
+}
+
+export const findMember = (projectId, memberId) =>
+  members.find((m) => m.id === Number(memberId) && m.projectId === Number(projectId)) ?? null
+
+export const countOwners = (projectId) =>
+  members.filter((m) => m.projectId === Number(projectId) && m.role === 'OWNER').length
+
+// PATCH /api/projects/:id/members/:memberId -> updated member
+export function updateMemberRole(member, role) {
+  member.role = role
+  return memberWithUser(member)
+}
+
+// DELETE /api/projects/:id/members/:memberId
+export function deleteMember(member) {
+  members.splice(members.indexOf(member), 1)
+}
+
+// POST /api/projects/:id/rollback -> updated project (with members)
+export function setActiveDeployment(projectId, deploymentId) {
+  const deployment = deployments.find((d) => d.id === Number(deploymentId) && d.projectId === Number(projectId))
+  if (!deployment || deployment.status !== 'READY') return null
+  projects.find((p) => p.id === Number(projectId)).activeDeploymentId = deployment.id
+  return getProject(projectId)
+}

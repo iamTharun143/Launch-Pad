@@ -63,4 +63,13 @@ A non-member gets 403 for everything in that project.
 - `POST /api/projects/:id/rollback` body: the client assumes `{ "deploymentId": <id> }`.
 - `GET /api/deployments/:id/logs?after=<logId>`: the client assumes a plain array of
   `{ id, deploymentId, line, createdAt }`, oldest first, with `after=0` meaning "from the start".
+- `POST /api/projects/:id/rollback` response: the client assumes the updated project
+  (same shape as `GET /api/projects/:id`).
+- `POST /api/projects/:id/members` with a GitHub username that has never logged in:
+  the client assumes the server creates the user row and adds them (the PRD says the
+  member "sees the project after logging in"), rather than returning 404.
+- `POST` / `PATCH` members response: the client assumes the member with
+  `user: { id, username, avatarUrl }`.
+- Last Owner: the client assumes the server refuses (400) to demote or remove the
+  only Owner of a project.
 - Rollback is a Must in the Role A handbook but a Stretch in the PRD.

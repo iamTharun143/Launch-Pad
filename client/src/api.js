@@ -152,4 +152,71 @@ export async function getLogs(deploymentId, after = 0) {
   return data
 }
 
+// Mock-only: the same permission checks the real server does.
+function mockRequireRole(projectId, allowed, message) {
+  if (!mock.getRole(projectId, mockUserId())) throw mockError(403, 'You are not a member of this project')
+  if (!allowed.includes(mock.getRole(projectId, mockUserId()))) throw mockError(403, message)
+}
+
+const ROLES = ['OWNER', 'DEVELOPER', 'VIEWER']
+
+// POST /api/projects/:id/rollback  body: { deploymentId } -> updated project
+export async function rollback(projectId, deploymentId) {
+  if (USE_MOCKS) {
+    await delay(400)
+    mockRequireRole(projectId, ['OWNER', 'DEVELOPER'], 'Only Owners and Developers can roll back')
+    const project = mock.setActiveDeployment(projectId, deploymentId)
+    if (!project) throw mockError(400, 'You can only roll back to a READY deployment of this project')
+    return project
+  }
+  const { data } = await api.post(`/api/projects/${projectId}/rollback`, { deploymentId })
+  return data
+}
+
+// POST /api/projects/:id/members  body: { username, role } -> new member (with user)
+export async function addMember(projectId, { username, role }) {
+  if (USE_MOCKS) {
+    await delay()
+    mockRequireRole(projectId, ['OWNER'], 'Only the Owner can manage the team')
+    if (!ROLES.includes(role)) throw mockError(400, 'Role must be OWNER, DEVELOPER or VIEWER')
+    const member = mock.addMember(projectId, username, role)
+    if (!member) throw mockError(400, `${username} is already a member of this project`)
+    return member
+  }
+  const { data } = await api.post(`/api/projects/${projectId}/members`, { username, role })
+  return data
+}
+
+// PATCH /api/projects/:id/members/:memberId  body: { role } -> updated member
+export async function updateMember(projectId, memberId, { role }) {
+  if (USE_MOCKS) {
+    await delay(400)
+    mockRequireRole(projectId, ['OWNER'], 'Only the Owner can manage the team')
+    const member = mock.findMember(projectId, memberId)
+    if (!member) throw mockError(404, 'Member not found')
+    if (member.role === 'OWNER' && role !== 'OWNER' && mock.countOwners(projectId) === 1) {
+      throw mockError(400, 'A project needs at least one Owner')
+    }
+    return mock.updateMemberRole(member, role)
+  }
+  const { data } = await api.patch(`/api/projects/${projectId}/members/${memberId}`, { role })
+  return data
+}
+
+// DELETE /api/projects/:id/members/:memberId -> 204, nothing returned
+export async function removeMember(projectId, memberId) {
+  if (USE_MOCKS) {
+    await delay(400)
+    mockRequireRole(projectId, ['OWNER'], 'Only the Owner can manage the team')
+    const member = mock.findMember(projectId, memberId)
+    if (!member) throw mockError(404, 'Member not found')
+    if (member.role === 'OWNER' && mock.countOwners(projectId) === 1) {
+      throw mockError(400, 'A project needs at least one Owner')
+    }
+    mock.deleteMember(member)
+    return
+  }
+  await api.delete(`/api/projects/${projectId}/members/${memberId}`)
+}
+
 export default api
