@@ -4,6 +4,8 @@ import { getErrorMessage, getProjects } from '../api.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
 import { liveUrl } from '../utils.js'
 
+const POLL_MS = 2000
+
 export default function Dashboard() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -20,6 +22,19 @@ export default function Dashboard() {
       .catch((err) => setError(getErrorMessage(err)))
       .finally(() => setLoading(false))
   }, [attempt])
+
+  // While any project is QUEUED or BUILDING, refresh every 2 s so its badge
+  // changes by itself (same idea as the Project detail page).
+  const hasRunning = projects.some((p) => ['QUEUED', 'BUILDING'].includes(p.latestDeployment?.status))
+  useEffect(() => {
+    if (!hasRunning) return
+    const timer = setInterval(() => {
+      getProjects()
+        .then(setProjects)
+        .catch(() => {}) // keep the last list; the next tick tries again
+    }, POLL_MS)
+    return () => clearInterval(timer)
+  }, [hasRunning])
 
   function retry() {
     setLoading(true)
