@@ -5,6 +5,8 @@ import { useAuth } from '../auth/useAuth.js'
 import { useRole } from '../auth/useRole.js'
 import { RoleBadge } from '../components/Badges.jsx'
 import { usePageTitle } from '../usePageTitle.js'
+import { ErrorState } from '../components/States.jsx'
+import { describeLoadError } from '../utils.js'
 
 const ROLE_OPTIONS = [
   { value: 'OWNER', label: 'Owner' },
@@ -94,23 +96,9 @@ export default function TeamSettings() {
   }
 
   if (error) {
-    const title =
-      error.status === 404 ? 'Project not found' : error.status === 403 ? "You don't have access to this project" : 'Could not load the team'
-    const canRetry = error.status !== 404 && error.status !== 403
     return (
-      <div className="mx-auto max-w-2xl rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-        <p className="font-medium text-red-700">{title}</p>
-        {canRetry && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
-        <div className="mt-4 flex justify-center gap-2">
-          {canRetry && (
-            <button onClick={retry} className="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">
-              Retry
-            </button>
-          )}
-          <Link to="/dashboard" className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-100">
-            Back to projects
-          </Link>
-        </div>
+      <div className="mx-auto max-w-2xl">
+        <ErrorState {...describeLoadError(error, 'Could not load the team')} onRetry={retry} />
       </div>
     )
   }

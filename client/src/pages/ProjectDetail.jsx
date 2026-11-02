@@ -4,8 +4,9 @@ import { createDeployment, getDeployments, getErrorMessage, getProject, rollback
 import { useRole } from '../auth/useRole.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
 import LogViewer from '../components/LogViewer.jsx'
-import { duration, liveUrl, shortSha, timeAgo } from '../utils.js'
+import { describeLoadError, duration, liveUrl, shortSha, timeAgo } from '../utils.js'
 import { usePageTitle } from '../usePageTitle.js'
+import { EmptyState, ErrorState } from '../components/States.jsx'
 
 // While a deployment is QUEUED or BUILDING, re-check every 2 s (same pace as the logs).
 const POLL_MS = 2000
@@ -102,7 +103,7 @@ export default function ProjectDetail() {
   }
 
   if (loading) return <DetailSkeleton />
-  if (error) return <DetailError error={error} onRetry={retry} />
+  if (error) return <ErrorState {...describeLoadError(error, 'Could not load this project')} onRetry={retry} />
 
   // triggeredBy is a user id; show the member's username when we know it.
   const usernameOf = (userId) => project.members.find((m) => m.user.id === userId)?.user.username ?? `user #${userId}`
@@ -191,12 +192,10 @@ export default function ProjectDetail() {
         </p>
       )}
       {deployments.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="font-medium">No deployments yet</p>
-          <p className="mt-1 text-sm text-gray-500">
-            {canDeploy ? 'Click Deploy to build this project and put it online.' : 'An Owner or Developer needs to deploy it first.'}
-          </p>
-        </div>
+        <EmptyState
+          title="No deployments yet"
+          text={canDeploy ? 'Click Deploy to build this project and put it online.' : 'An Owner or Developer needs to deploy it first.'}
+        />
       ) : (
         <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           {deployments.map((d) => (
@@ -271,27 +270,6 @@ function DetailSkeleton() {
         {[1, 2, 3].map((n) => (
           <div key={n} className="h-12 rounded-lg bg-gray-200" />
         ))}
-      </div>
-    </div>
-  )
-}
-
-function DetailError({ error, onRetry }) {
-  const title =
-    error.status === 404 ? 'Project not found' : error.status === 403 ? "You don't have access to this project" : 'Could not load this project'
-  return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-      <p className="font-medium text-red-700">{title}</p>
-      {error.status !== 404 && error.status !== 403 && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
-      <div className="mt-4 flex justify-center gap-2">
-        {error.status !== 404 && error.status !== 403 && (
-          <button onClick={onRetry} className="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">
-            Retry
-          </button>
-        )}
-        <Link to="/dashboard" className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-100">
-          Back to projects
-        </Link>
       </div>
     </div>
   )

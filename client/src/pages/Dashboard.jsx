@@ -4,6 +4,7 @@ import { getErrorMessage, getProjects } from '../api.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
 import { liveUrl } from '../utils.js'
 import { usePageTitle } from '../usePageTitle.js'
+import { EmptyState, ErrorState } from '../components/States.jsx'
 
 const POLL_MS = 2000
 
@@ -60,20 +61,13 @@ export default function Dashboard() {
           ))}
         </ProjectGrid>
       ) : error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-red-700">Could not load projects: {error}</p>
-          <button onClick={retry}className="mt-3 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">
-            Retry
-          </button>
-        </div>
+        <ErrorState title="Could not load projects" message={error} onRetry={retry} showBackLink={false} />
       ) : projects.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="font-medium">No projects yet</p>
-          <p className="mt-1 text-sm text-gray-500">Create your first project to deploy a GitHub repo.</p>
-          <Link to="/projects/new" className="mt-4 inline-block rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">
+        <EmptyState title="No projects yet" text="Create your first project to deploy a GitHub repo.">
+          <Link to="/projects/new" className="inline-block rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">
             New Project
           </Link>
-        </div>
+        </EmptyState>
       ) : (
         <ProjectGrid>
           {projects.map((project) => (

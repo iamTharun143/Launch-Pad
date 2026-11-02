@@ -22,5 +22,13 @@ export function duration(start, end) {
   return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`
 }
 
+// Turns a failed project load ({ status, message }) into what ErrorState shows.
+// 403 and 404 get a clear title and no Retry, because retrying won't change them.
+export function describeLoadError(error, fallbackTitle) {
+  if (error.status === 404) return { title: 'Project not found', canRetry: false }
+  if (error.status === 403) return { title: "You don't have access to this project", canRetry: false }
+  return { title: fallbackTitle, message: error.message, canRetry: true }
+}
+
 // Commit ids are long; 7 characters is what GitHub shows.
 export const shortSha = (sha) => (sha ? sha.slice(0, 7) : null)
