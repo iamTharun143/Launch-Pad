@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 680" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <title>Launchpad architecture</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#475569"/>
+    </marker>
+    <style>
+      .box { stroke-width: 2; rx: 12; }
+      .a { fill: #eff6ff; stroke: #2563eb; }
+      .b { fill: #fff7ed; stroke: #ea580c; }
+      .ext { fill: #f8fafc; stroke: #94a3b8; }
+      .title { font-size: 17px; font-weight: 700; fill: #0f172a; }
+      .sub { font-size: 13px; fill: #475569; }
+      .edge { stroke: #475569; stroke-width: 1.75; fill: none; marker-end: url(#arrow); }
+      .label { font-size: 12.5px; fill: #334155; }
+      .labelbg { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <!-- White background so it reads well in GitHub dark mode too -->
+  <rect width="1020" height="680" fill="#ffffff"/>
+
+  <!-- Nodes -->
+  <rect class="box ext" x="40" y="40" width="220" height="72"/>
+  <text class="title" x="150" y="72" text-anchor="middle">Browser</text>
+  <text class="sub" x="150" y="94" text-anchor="middle">the user</text>
+
+  <rect class="box ext" x="760" y="40" width="220" height="72"/>
+  <text class="title" x="870" y="72" text-anchor="middle">GitHub</text>
+  <text class="sub" x="870" y="94" text-anchor="middle">OAuth login · public repos</text>
+
+  <rect class="box a" x="40" y="200" width="220" height="80"/>
+  <text class="title" x="150" y="234" text-anchor="middle">React dashboard</text>
+  <text class="sub" x="150" y="256" text-anchor="middle">Vite + Tailwind · port 5173</text>
+
+  <rect class="box b" x="400" y="200" width="220" height="80"/>
+  <text class="title" x="510" y="234" text-anchor="middle">Express API</text>
+  <text class="sub" x="510" y="256" text-anchor="middle">auth + roles · port 5000</text>
+
+  <rect class="box b" x="400" y="390" width="220" height="80"/>
+  <text class="title" x="510" y="424" text-anchor="middle">PostgreSQL</text>
+  <text class="sub" x="510" y="446" text-anchor="middle">Supabase + Prisma</text>
+
+  <rect class="box b" x="760" y="390" width="220" height="80"/>
+  <text class="title" x="870" y="424" text-anchor="middle">Build worker</text>
+  <text class="sub" x="870" y="446" text-anchor="middle">Node · child_process.spawn</text>
+
+  <rect class="box b" x="400" y="560" width="220" height="80"/>
+  <text class="title" x="510" y="594" text-anchor="middle">Site server</text>
+  <text class="sub" x="510" y="616" text-anchor="middle">Express · port 8000</text>
+
+  <rect class="box ext" x="760" y="560" width="220" height="80" stroke-dasharray="6 5"/>
+  <text class="title" x="870" y="594" text-anchor="middle">deployments/&lt;id&gt;/</text>
+  <text class="sub" x="870" y="616" text-anchor="middle">built files, one folder per deploy</text>
+
+  <!-- Edges -->
+  <!-- Browser -> dashboard -->
+  <path class="edge" d="M150 112 V196"/>
+  <rect class="labelbg" x="158" y="146" width="122" height="20"/>
+  <text class="label" x="162" y="160">opens localhost:5173</text>
+
+  <!-- Dashboard -> API -->
+  <path class="edge" d="M260 240 H396"/>
+  <rect class="labelbg" x="272" y="214" width="112" height="20"/>
+  <text class="label" x="276" y="228">REST + JWT (Axios)</text>
+
+  <!-- API -> GitHub -->
+  <path class="edge" d="M620 220 C 700 220, 760 180, 830 116"/>
+  <rect class="labelbg" x="676" y="176" width="80" height="20"/>
+  <text class="label" x="680" y="190">OAuth login</text>
+
+  <!-- API -> DB -->
+  <path class="edge" d="M510 280 V386"/>
+  <rect class="labelbg" x="518" y="322" width="150" height="20"/>
+  <text class="label" x="522" y="336">users, projects, roles…</text>
+
+  <!-- Worker -> DB -->
+  <path class="edge" d="M760 430 H624"/>
+  <rect class="labelbg" x="630" y="390" width="124" height="34"/>
+  <text class="label" x="634" y="404">polls QUEUED rows,</text>
+  <text class="label" x="634" y="419">saves status + logs</text>
+
+  <!-- Worker -> GitHub -->
+  <path class="edge" d="M900 390 V116"/>
+  <rect class="labelbg" x="908" y="240" width="64" height="20"/>
+  <text class="label" x="912" y="254">git clone</text>
+
+  <!-- Worker -> deployments folder -->
+  <path class="edge" d="M870 470 V556"/>
+  <rect class="labelbg" x="878" y="502" width="126" height="20"/>
+  <text class="label" x="882" y="516">install, build, copy</text>
+
+  <!-- Site server -> DB -->
+  <path class="edge" d="M510 560 V474"/>
+  <rect class="labelbg" x="518" y="506" width="120" height="20"/>
+  <text class="label" x="522" y="520">active deployment</text>
+
+  <!-- Site server -> folder -->
+  <path class="edge" d="M620 600 H756"/>
+  <rect class="labelbg" x="650" y="574" width="80" height="20"/>
+  <text class="label" x="654" y="588">serves files</text>
+
+  <!-- Browser -> site server (the live website) -->
+  <path class="edge" d="M40 76 H20 V600 H396"/>
+  <rect class="labelbg" x="140" y="574" width="176" height="20"/>
+  <text class="label" x="144" y="588">opens &lt;name&gt;.localhost:8000</text>
+
+  <!-- Legend -->
+  <rect x="40" y="330" width="16" height="16" rx="4" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+  <text class="label" x="64" y="343">Role A · Frontend &amp; Product</text>
+  <rect x="40" y="358" width="16" height="16" rx="4" fill="#fff7ed" stroke="#ea580c" stroke-width="2"/>
+  <text class="label" x="64" y="371">Role B · Backend &amp; Deploy Engine</text>
+  <rect x="40" y="386" width="16" height="16" rx="4" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+  <text class="label" x="64" y="399">Outside / on disk</text>
+</svg>
