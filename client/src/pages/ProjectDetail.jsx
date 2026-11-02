@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { createDeployment, getDeployments, getErrorMessage, getProject } from '../api.js'
 import { useAuth } from '../auth/useAuth.js'
 import { RoleBadge, StatusBadge } from '../components/Badges.jsx'
+import LogViewer from '../components/LogViewer.jsx'
 import { duration, liveUrl, shortSha, timeAgo } from '../utils.js'
 
-// While a deployment is QUEUED or BUILDING, re-check every few seconds.
-const POLL_MS = 3000
+// While a deployment is QUEUED or BUILDING, re-check every 2 s (same pace as the logs).
+const POLL_MS = 2000
 const isRunning = (d) => d.status === 'QUEUED' || d.status === 'BUILDING'
 
 export default function ProjectDetail() {
   const { id } = useParams()
   const { user } = useAuth()
+  // The selected deployment lives in the URL (?deployment=7), so refresh keeps it.
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [project, setProject] = useState(null)
   const [deployments, setDeployments] = useState([])
@@ -57,13 +60,19 @@ export default function ProjectDetail() {
     setAttempt((n) => n + 1)
   }
 
+  // replace: true so clicking through deployments doesn't fill the Back button history.
+  function selectDeployment(deploymentId) {
+    setSearchParams({ deployment: deploymentId }, { replace: true })
+  }
+
   async function handleDeploy() {
     setDeploying(true)
     setDeployError('')
     try {
       const deployment = await createDeployment(id)
-      // Show it at the top right away; polling takes it from here.
+      // Show it at the top right away and open its logs; polling takes it from here.
       setDeployments((prev) => [deployment, ...prev])
+      selectDeployment(deployment.id)
     } catch (err) {
       setDeployError(getErrorMessage(err))
     } finally {
@@ -77,6 +86,10 @@ export default function ProjectDetail() {
   const myRole = project.members.find((m) => m.user.id === user.id)?.role
   // triggeredBy is a user id; show the member's username when we know it.
   const usernameOf = (userId) => project.members.find((m) => m.user.id === userId)?.user.username ?? `user #${userId}`
+
+  // The one from ?deployment=, or the newest if that's missing or unknown.
+  const selected =
+    deployments.find((d) => d.id === Number(searchParams.get('deployment'))) ?? deployments[0] ?? null
 
   return (
     <div>
@@ -125,6 +138,18 @@ export default function ProjectDetail() {
         </div>
       </div>
 
+      {/* Build logs for the selected deployment */}
+      {selected && (
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Build logs · #{selected.id}</h2>
+            <StatusBadge status={selected.status} />
+          </div>
+          {/* key: a different deployment gets a brand-new LogViewer (fresh lines, fresh polling) */}
+          <LogViewer key={selected.id} deploymentId={selected.id} status={selected.status} />
+        </section>
+      )}
+
       {/* Deployment history */}
       <h2 className="mt-8 mb-3 text-lg font-semibold">Deployments</h2>
       {deployments.length === 0 ? (
@@ -133,12 +158,14 @@ export default function ProjectDetail() {
           <p className="mt-1 text-sm text-gray-500">Click Deploy to build this project and put it online.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm">
+        <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
           {deployments.map((d) => (
             <DeploymentRow
               key={d.id}
               deployment={d}
               isLive={d.id === project.activeDeploymentId}
+              isSelected={d.id === selected?.id}
+              onSelect={() => selectDeployment(d.id)}
               triggeredBy={usernameOf(d.triggeredBy)}
             />
           ))}
@@ -148,26 +175,35 @@ export default function ProjectDetail() {
   )
 }
 
-function DeploymentRow({ deployment, isLive, triggeredBy }) {
+function DeploymentRow({ deployment, isLive, isSelected, onSelect, triggeredBy }) {
   const { id, status, commitSha, createdAt, finishedAt } = deployment
   return (
-    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-      <div className="w-24">
-        <StatusBadge status={status} />
-      </div>
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="font-medium">#{id}</span>
-        {commitSha && <code className="text-xs text-gray-500">{shortSha(commitSha)}</code>}
-        {isLive && (
-          <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">Live</span>
-        )}
-      </div>
-      <div className="text-right text-xs text-gray-500">
-        <span>
-          {timeAgo(createdAt)} by {triggeredBy}
-        </span>
-        {finishedAt && <span> · {duration(createdAt, finishedAt)}</span>}
-      </div>
+    <li>
+      {/* A button so the row works with keyboard (Tab + Enter) as well as mouse. */}
+      <button
+        onClick={onSelect}
+        aria-current={isSelected}
+        className={`flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-left ${
+          isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'
+        }`}
+      >
+        <div className="w-24">
+          <StatusBadge status={status} />
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="font-medium">#{id}</span>
+          {commitSha && <code className="text-xs text-gray-500">{shortSha(commitSha)}</code>}
+          {isLive && (
+            <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">Live</span>
+          )}
+        </div>
+        <div className="text-right text-xs text-gray-500">
+          <span>
+            {timeAgo(createdAt)} by {triggeredBy}
+          </span>
+          {finishedAt && <span> · {duration(createdAt, finishedAt)}</span>}
+        </div>
+      </button>
     </li>
   )
 }
