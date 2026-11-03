@@ -10,6 +10,15 @@ const app = express()
 const SITE_PORT = process.env.SITE_PORT || 8000
 const DEPLOYMENTS_ROOT = path.join(process.cwd(), 'deployments')
 
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /**
  * Extracts the project subdomain from the Host header.
  * Example: 'portfolio.localhost:8000' -> 'portfolio'
@@ -18,9 +27,22 @@ const DEPLOYMENTS_ROOT = path.join(process.cwd(), 'deployments')
 function extractSubdomain(req) {
   const host = req.headers.host || ''
   const hostname = host.split(':')[0] // strip port
+
+  // If request arrives via IPv4 or IPv6 literal or plain localhost
+  const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname === '::1'
+  if (isIp || hostname === 'localhost') {
+    if (req.query.project) {
+      return String(req.query.project).toLowerCase().trim()
+    }
+    if (req.headers['x-project']) {
+      return String(req.headers['x-project']).toLowerCase().trim()
+    }
+    return null
+  }
+
   const parts = hostname.split('.')
 
-  // *.localhost or *.domain.com
+  // *.localhost or *.domain.com (e.g. portfolio.localhost)
   if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== 'www') {
     return parts[0].toLowerCase()
   }
@@ -89,7 +111,7 @@ app.use(async (req, res) => {
           <body>
             <div class="box">
               <h1>404 - Project Not Found</h1>
-              <p>No project named "<strong>${subdomain}</strong>" is registered on Launchpad.</p>
+              <p>No project named "<strong>${escapeHtml(subdomain)}</strong>" is registered on Launchpad.</p>
             </div>
           </body>
         </html>
@@ -113,7 +135,7 @@ app.use(async (req, res) => {
           <body>
             <div class="box">
               <h1>No Active Deployment</h1>
-              <p>Project "<strong>${project.name}</strong>" has not completed any successful deployments yet.</p>
+              <p>Project "<strong>${escapeHtml(project.name)}</strong>" has not completed any successful deployments yet.</p>
             </div>
           </body>
         </html>
@@ -138,7 +160,7 @@ app.use(async (req, res) => {
           <body>
             <div class="box">
               <h1>Deployment Assets Missing</h1>
-              <p>The build directory for deployment <code>${project.activeDeploymentId}</code> was not found on disk.</p>
+              <p>The build directory for deployment <code>${escapeHtml(project.activeDeploymentId)}</code> was not found on disk.</p>
             </div>
           </body>
         </html>
@@ -166,7 +188,7 @@ app.use(async (req, res) => {
   }
 })
 
-app.listen(SITE_PORT, () => {
+app.listen(SITE_PORT, '0.0.0.0', () => {
   console.log(`[site-server] Launchpad Site Server listening on port ${SITE_PORT}`)
   console.log(`[site-server] Routing *.localhost:${SITE_PORT} to active deployments`)
 })

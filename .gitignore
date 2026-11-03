@@ -26,6 +26,12 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# Database files
+*.db
+*.db-journal
+dev.db
+server/dev.db
+
 # Editor & OS files
 .vscode/*
 !.vscode/extensions.json

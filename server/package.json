@@ -9,6 +9,7 @@
     "worker": "node src/worker.js",
     "site": "node src/site-server.js",
     "dev": "node src/index.js",
+    "test": "node test-integration.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev"

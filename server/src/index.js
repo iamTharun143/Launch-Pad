@@ -68,7 +68,7 @@ app.use((err, req, res, _next) => {
   res.status(status).json({ error: message })
 })
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[api] Launchpad API Server listening on port ${PORT}`)
   console.log(`[api] Ready for requests from ${process.env.CLIENT_URL || 'http://localhost:5173'}`)
 })

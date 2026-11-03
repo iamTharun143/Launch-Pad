@@ -25,7 +25,15 @@ router.get('/projects', async (req, res) => {
     const memberships = await prisma.member.findMany({
       where: { userId: req.user.id },
       include: {
-        project: true,
+        project: {
+          include: {
+            deployments: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { id: true, status: true },
+            },
+          },
+        },
       },
       orderBy: {
         project: {
@@ -34,10 +42,15 @@ router.get('/projects', async (req, res) => {
       },
     })
 
-    const projectsWithRoles = memberships.map((m) => ({
-      ...m.project,
-      role: m.role,
-    }))
+    const projectsWithRoles = memberships.map((m) => {
+      const latest = m.project.deployments?.[0]
+      const { deployments, ...projectData } = m.project
+      return {
+        ...projectData,
+        role: m.role,
+        latestDeployment: latest ? { id: latest.id, status: latest.status } : null,
+      }
+    })
 
     res.json(projectsWithRoles)
   } catch (err) {
@@ -256,7 +269,7 @@ router.post('/projects/:id/rollback', requireRole('OWNER', 'DEVELOPER'), async (
  * Owner permission. Body: { username, role }.
  * Adds user by GitHub username with role OWNER, DEVELOPER, or VIEWER.
  */
-router.post('/api/projects/:id/members', requireRole('OWNER'), async (req, res) => {
+router.post('/projects/:id/members', requireRole('OWNER'), async (req, res) => {
   const { username, role } = req.body || {}
 
   if (!username || typeof username !== 'string') {
@@ -270,7 +283,7 @@ router.post('/api/projects/:id/members', requireRole('OWNER'), async (req, res) 
   try {
     // Find or create user record by username
     let targetUser = await prisma.user.findFirst({
-      where: { username: { equals: username.trim(), mode: 'insensitive' } },
+      where: { username: username.trim() },
     })
 
     if (!targetUser) {
@@ -343,6 +356,16 @@ router.patch('/projects/:id/members/:memberId', requireRole('OWNER'), async (req
       return res.status(404).json({ error: 'Member not found' })
     }
 
+    // Guard: Prevent demoting the last Owner of the project
+    if (member.role === 'OWNER' && role !== 'OWNER') {
+      const ownerCount = await prisma.member.count({
+        where: { projectId: req.params.id, role: 'OWNER' },
+      })
+      if (ownerCount <= 1) {
+        return res.status(400).json({ error: 'A project needs at least one Owner' })
+      }
+    }
+
     const updated = await prisma.member.update({
       where: { id: member.id },
       data: { role },
@@ -375,6 +398,16 @@ router.delete('/projects/:id/members/:memberId', requireRole('OWNER'), async (re
 
     if (!member) {
       return res.status(404).json({ error: 'Member not found' })
+    }
+
+    // Guard: Prevent removing the last Owner of the project
+    if (member.role === 'OWNER') {
+      const ownerCount = await prisma.member.count({
+        where: { projectId: req.params.id, role: 'OWNER' },
+      })
+      if (ownerCount <= 1) {
+        return res.status(400).json({ error: 'A project needs at least one Owner' })
+      }
     }
 
     await prisma.member.delete({

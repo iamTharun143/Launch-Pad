@@ -19,14 +19,29 @@ function signUserToken(user) {
  * GET /auth/github
  * Redirects user to GitHub OAuth login page
  */
-router.get('/github', (req, res) => {
+router.get('/github', async (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
 
-  // If GitHub OAuth credentials are not provided, offer seamless dev mock login
+  // If GitHub OAuth credentials are not provided, offer seamless dev login with real signed JWT
   if (!clientId) {
-    console.log('[auth] GITHUB_CLIENT_ID not set. Redirecting to dev mock login callback.')
-    return res.redirect(`${clientUrl}/auth/callback?token=mock_jwt_token_for_dev`)
+    console.log('[auth] GITHUB_CLIENT_ID not set. Generating dev user token and redirecting.')
+    try {
+      const devUser = await prisma.user.upsert({
+        where: { githubId: '583231' },
+        update: { username: 'octocat', avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4' },
+        create: {
+          githubId: '583231',
+          username: 'octocat',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
+        },
+      })
+      const token = signUserToken(devUser)
+      return res.redirect(`${clientUrl}/auth/callback?token=${token}`)
+    } catch (err) {
+      console.error('[auth] Dev auto-login error:', err)
+      return res.redirect(`${clientUrl}/login?error=dev_auth_failed`)
+    }
   }
 
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=read:user`
