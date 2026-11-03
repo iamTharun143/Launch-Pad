@@ -1,53 +1,41 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { RefreshCw, AlertCircle } from 'lucide-react'
-import { useAuth } from '../context/useAuth'
+import { useEffect, useRef } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth.js'
+import Spinner from '../components/Spinner.jsx'
+import { usePageTitle } from '../usePageTitle.js'
 
-export function AuthCallback() {
+// The API sends the browser here after GitHub login: /auth/callback?token=<JWT>
+export default function AuthCallback() {
+  usePageTitle('Logging in')
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
+  const token = searchParams.get('token')
   const { login } = useAuth()
-  const [error, setError] = useState(() =>
-    searchParams.get('token') ? null : 'Missing authentication token in URL callback'
-  )
+  const navigate = useNavigate()
+  // React's StrictMode runs effects twice in development; this makes us log in once.
+  const started = useRef(false)
 
   useEffect(() => {
-    const token = searchParams.get('token')
-    if (!token) return
+    if (!token || started.current) return
+    started.current = true
+    // Save the token, load the user, then go to the dashboard.
+    // replace: true removes this page from history, so Back doesn't return here.
+    login(token).then(() => navigate('/dashboard', { replace: true }))
+  }, [token, login, navigate])
 
-    login(token)
-      .then(() => {
-        navigate('/', { replace: true })
-      })
-      .catch((err) => {
-        setError(err.response?.data?.error || err.message || 'Authentication exchange failed')
-      })
-  }, [searchParams, login, navigate])
-
-  if (error) {
+  if (!token) {
     return (
-      <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
-        <div className="p-8 rounded-2xl bg-dark-900 border border-red-900/40 max-w-md w-full">
-          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-white">Login Failed</h2>
-          <p className="text-xs text-red-400 font-mono mt-2 mb-6">{error}</p>
-          <Link
-            to="/login"
-            className="px-4 py-2 rounded-lg bg-dark-800 hover:bg-dark-700 text-white text-xs font-medium inline-block transition"
-          >
-            Return to Login
-          </Link>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-50 px-4 text-center">
+        <p className="text-red-600">Login failed: no token came back from the server.</p>
+        <Link to="/login" className="font-medium text-indigo-600 hover:underline">
+          Try again
+        </Link>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
-      <RefreshCw className="w-8 h-8 text-brand-500 animate-spin mb-4" />
-      <p className="text-sm font-mono text-gray-400">Completing GitHub authentication...</p>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <Spinner label="Logging you in…" />
     </div>
   )
 }
-
-export default AuthCallback

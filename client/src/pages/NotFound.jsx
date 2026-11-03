@@ -1,26 +1,19 @@
 import { Link } from 'react-router-dom'
-import { FileQuestion, ArrowLeft } from 'lucide-react'
+import { usePageTitle } from '../usePageTitle.js'
+import Logo from '../components/Logo.jsx'
 
-export function NotFound() {
+export default function NotFound() {
+  usePageTitle('Page not found')
   return (
-    <div className="min-h-screen bg-dark-950 flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-dark-900 border border-dark-800 flex items-center justify-center text-gray-500 mb-4">
-        <FileQuestion className="w-8 h-8" />
-      </div>
-      <h1 className="text-3xl font-bold text-white tracking-tight">404</h1>
-      <p className="text-gray-400 mt-2 text-sm max-w-sm">
-        The page or project you were looking for does not exist or has been moved.
-      </p>
-      <Link
-        to="/"
-        className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-dark-900 border border-dark-700 hover:border-dark-600 text-sm font-medium text-white transition"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Dashboard
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-gray-50 px-4 text-center">
+      <Link to="/dashboard" aria-label="Launchpad home">
+        <Logo />
+      </Link>
+      <h1 className="mt-4 text-2xl font-bold">Page not found</h1>
+      <p className="text-sm text-gray-500">That address doesn't match any page.</p>
+      <Link to="/dashboard" className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700">
+        Back to projects
       </Link>
     </div>
   )
 }
-
-export default NotFound
-

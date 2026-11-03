@@ -1,9 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* One clear focus ring for keyboard users on every link, button and field.
+   :focus-visible only shows it for keyboard focus, not mouse clicks. */
 @layer base {
-  body {
-    @apply bg-dark-950 text-gray-100 font-sans antialiased min-h-screen selection:bg-brand-500/20 selection:text-brand-500;
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-500);
+    outline-offset: 2px;
   }
 }

@@ -1,196 +1,307 @@
-// Mock data matching docs/api-contract.md exactly
+// Fake data shaped exactly like docs/api-contract.md.
+// Used until the real API (Role B) is ready; on Day 3 the pages switch to src/api.js.
+// Each export is named after the endpoint whose response it imitates.
 
-export const mockCurrentUser = {
-  id: 'usr_launchpad_01',
-  githubId: '12345678',
-  username: 'octocat',
-  avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
-  createdAt: '2026-01-15T10:00:00.000Z',
+// Fake avatars: a coloured circle with the first letter, drawn as an inline SVG.
+// (Real GitHub avatar URLs would show real people's photos in screenshots.)
+const AVATAR_COLORS = ['#4f46e5', '#d97706', '#059669', '#db2777', '#0891b2']
+export function fakeAvatar(username, id) {
+  const color = AVATAR_COLORS[id % AVATAR_COLORS.length]
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="${color}"/><text x="20" y="26" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#fff" text-anchor="middle">${username[0].toUpperCase()}</text></svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
-export const mockUsers = [
-  mockCurrentUser,
-  {
-    id: 'usr_dev_02',
-    githubId: '87654321',
-    username: 'alex-developer',
-    avatarUrl: 'https://avatars.githubusercontent.com/u/9919?v=4',
-    createdAt: '2026-01-16T12:00:00.000Z',
-  },
-  {
-    id: 'usr_viewer_03',
-    githubId: '11223344',
-    username: 'sarah-reviewer',
-    avatarUrl: 'https://avatars.githubusercontent.com/u/9920?v=4',
-    createdAt: '2026-01-17T14:30:00.000Z',
-  },
+// ---- users (GET /api/me returns one of these) ----
+export const users = [
+  { id: 1, githubId: 1001, username: 'ajay-dev', avatarUrl: fakeAvatar('ajay-dev', 1), createdAt: '2026-11-01T09:00:00.000Z' },
+  { id: 2, githubId: 1002, username: 'teammate-b', avatarUrl: fakeAvatar('teammate-b', 2), createdAt: '2026-11-01T09:05:00.000Z' },
+  { id: 3, githubId: 1003, username: 'viewer-friend', avatarUrl: fakeAvatar('viewer-friend', 3), createdAt: '2026-11-01T09:10:00.000Z' },
 ]
 
-export const initialProjects = [
-  {
-    id: 'proj_docs_01',
-    name: 'docs-site',
-    repoUrl: 'https://github.com/octocat/docs-site',
-    buildCommand: 'npm run build',
-    outputDir: 'dist',
-    activeDeploymentId: 'dep_01',
-    createdAt: '2026-01-20T08:00:00.000Z',
-    role: 'OWNER',
-  },
-  {
-    id: 'proj_portfolio_02',
-    name: 'portfolio-app',
-    repoUrl: 'https://github.com/octocat/portfolio',
-    buildCommand: 'npm run build',
-    outputDir: 'dist',
-    activeDeploymentId: 'dep_03',
-    createdAt: '2026-01-22T09:15:00.000Z',
-    role: 'DEVELOPER',
-  },
-  {
-    id: 'proj_dashboard_03',
-    name: 'analytics-dash',
-    repoUrl: 'https://github.com/octocat/analytics-dashboard',
-    buildCommand: 'npm run build',
-    outputDir: 'build',
+// The logged-in user while we use fake data.
+export const me = users[0]
+
+// ---- projects table ----
+export const projects = [
+  { id: 1, name: 'portfolio', repoUrl: 'https://github.com/ajay-dev/portfolio', buildCommand: 'npm run build', outputDir: 'dist', activeDeploymentId: 3, createdAt: '2026-11-01T10:00:00.000Z' },
+  { id: 2, name: 'todo-app', repoUrl: 'https://github.com/teammate-b/todo-app', buildCommand: 'npm run build', outputDir: 'dist', activeDeploymentId: null, createdAt: '2026-11-01T11:00:00.000Z' },
+  { id: 3, name: 'landing-page', repoUrl: 'https://github.com/teammate-b/landing-page', buildCommand: 'npm run build', outputDir: 'build', activeDeploymentId: 6, createdAt: '2026-11-01T12:00:00.000Z' },
+]
+
+// ---- members table (user 1 has a different role in each project) ----
+export const members = [
+  { id: 1, projectId: 1, userId: 1, role: 'OWNER' },
+  { id: 2, projectId: 1, userId: 2, role: 'DEVELOPER' },
+  { id: 3, projectId: 1, userId: 3, role: 'VIEWER' },
+  { id: 4, projectId: 2, userId: 2, role: 'OWNER' },
+  { id: 5, projectId: 2, userId: 1, role: 'DEVELOPER' },
+  { id: 6, projectId: 3, userId: 2, role: 'OWNER' },
+  { id: 7, projectId: 3, userId: 1, role: 'VIEWER' },
+]
+
+// ---- deployments table (every status appears at least once) ----
+export const deployments = [
+  { id: 1, projectId: 1, status: 'READY', commitSha: 'a1b2c3d', triggeredBy: 1, createdAt: '2026-11-01T10:05:00.000Z', finishedAt: '2026-11-01T10:05:40.000Z' },
+  { id: 2, projectId: 1, status: 'FAILED', commitSha: 'e4f5a6b', triggeredBy: 2, createdAt: '2026-11-01T14:00:00.000Z', finishedAt: '2026-11-01T14:00:25.000Z' },
+  { id: 3, projectId: 1, status: 'READY', commitSha: 'c7d8e9f', triggeredBy: 1, createdAt: '2026-11-02T09:00:00.000Z', finishedAt: '2026-11-02T09:00:35.000Z' },
+  { id: 4, projectId: 2, status: 'BUILDING', commitSha: '1a2b3c4', triggeredBy: 1, createdAt: '2026-11-02T10:00:00.000Z', finishedAt: null },
+  { id: 5, projectId: 2, status: 'QUEUED', commitSha: null, triggeredBy: 2, createdAt: '2026-11-02T10:01:00.000Z', finishedAt: null },
+  { id: 6, projectId: 3, status: 'READY', commitSha: '5d6e7f8', triggeredBy: 2, createdAt: '2026-11-01T12:10:00.000Z', finishedAt: '2026-11-01T12:10:50.000Z' },
+]
+
+// ---- logs table ----
+export const logs = [
+  { id: 1, deploymentId: 3, line: 'Cloning https://github.com/ajay-dev/portfolio ...', createdAt: '2026-11-02T09:00:01.000Z' },
+  { id: 2, deploymentId: 3, line: '$ npm install', createdAt: '2026-11-02T09:00:05.000Z' },
+  { id: 3, deploymentId: 3, line: 'added 212 packages in 14s', createdAt: '2026-11-02T09:00:19.000Z' },
+  { id: 4, deploymentId: 3, line: '$ npm run build', createdAt: '2026-11-02T09:00:20.000Z' },
+  { id: 5, deploymentId: 3, line: 'vite v8.3.5 building for production...', createdAt: '2026-11-02T09:00:21.000Z' },
+  { id: 6, deploymentId: 3, line: '✓ built in 1.84s', createdAt: '2026-11-02T09:00:33.000Z' },
+  { id: 7, deploymentId: 3, line: 'Copied dist/ to deployments/3/', createdAt: '2026-11-02T09:00:35.000Z' },
+  { id: 8, deploymentId: 2, line: '$ npm run build', createdAt: '2026-11-01T14:00:20.000Z' },
+  { id: 9, deploymentId: 2, line: "Error: Cannot find module './Header'", createdAt: '2026-11-01T14:00:24.000Z' },
+  { id: 10, deploymentId: 2, line: 'Build failed with exit code 1', createdAt: '2026-11-01T14:00:25.000Z' },
+]
+
+// ---------------------------------------------------------------
+// Helpers that build endpoint-shaped responses from the tables above.
+// The extra fields (role, latestDeployment, user) are the shapes listed
+// under "Open questions" in docs/api-contract.md; confirm them with Role B.
+// ---------------------------------------------------------------
+
+const findUser = (userId) => users.find((u) => u.id === userId)
+
+// GET /api/projects -> projects I'm a member of, with my role and newest deployment
+export function getMyProjects(userId = me.id) {
+  return members
+    .filter((m) => m.userId === userId)
+    .map((m) => {
+      const project = projects.find((p) => p.id === m.projectId)
+      const latest = getDeployments(project.id)[0]
+      return {
+        ...project,
+        role: m.role,
+        latestDeployment: latest ? { id: latest.id, status: latest.status } : null,
+      }
+    })
+}
+
+// POST /api/projects -> new project; the creator becomes OWNER.
+// Only lives in memory, so it disappears when the page reloads.
+export function addProject({ name, repoUrl, buildCommand, outputDir }, userId = me.id) {
+  const project = {
+    id: Math.max(...projects.map((p) => p.id)) + 1,
+    name,
+    repoUrl,
+    buildCommand,
+    outputDir,
     activeDeploymentId: null,
-    createdAt: '2026-02-01T11:45:00.000Z',
-    role: 'VIEWER',
-  },
-]
-
-export const initialMembers = [
-  {
-    id: 'mem_01',
-    projectId: 'proj_docs_01',
-    userId: 'usr_launchpad_01',
-    role: 'OWNER',
-    user: {
-      id: 'usr_launchpad_01',
-      username: 'octocat',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
-    },
-  },
-  {
-    id: 'mem_02',
-    projectId: 'proj_docs_01',
-    userId: 'usr_dev_02',
-    role: 'DEVELOPER',
-    user: {
-      id: 'usr_dev_02',
-      username: 'alex-developer',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/9919?v=4',
-    },
-  },
-  {
-    id: 'mem_03',
-    projectId: 'proj_docs_01',
-    userId: 'usr_viewer_03',
-    role: 'VIEWER',
-    user: {
-      id: 'usr_viewer_03',
-      username: 'sarah-reviewer',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/9920?v=4',
-    },
-  },
-  {
-    id: 'mem_04',
-    projectId: 'proj_portfolio_02',
-    userId: 'usr_dev_02',
-    role: 'OWNER',
-    user: {
-      id: 'usr_dev_02',
-      username: 'alex-developer',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/9919?v=4',
-    },
-  },
-  {
-    id: 'mem_05',
-    projectId: 'proj_portfolio_02',
-    userId: 'usr_launchpad_01',
-    role: 'DEVELOPER',
-    user: {
-      id: 'usr_launchpad_01',
-      username: 'octocat',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
-    },
-  },
-  {
-    id: 'mem_06',
-    projectId: 'proj_dashboard_03',
-    userId: 'usr_dev_02',
-    role: 'OWNER',
-    user: {
-      id: 'usr_dev_02',
-      username: 'alex-developer',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/9919?v=4',
-    },
-  },
-  {
-    id: 'mem_07',
-    projectId: 'proj_dashboard_03',
-    userId: 'usr_launchpad_01',
-    role: 'VIEWER',
-    user: {
-      id: 'usr_launchpad_01',
-      username: 'octocat',
-      avatarUrl: 'https://avatars.githubusercontent.com/u/583231?v=4',
-    },
-  },
-]
-
-export const initialDeployments = [
-  {
-    id: 'dep_01',
-    projectId: 'proj_docs_01',
-    status: 'READY',
-    commitSha: '7a1b8c9',
-    triggeredBy: 'octocat',
-    createdAt: '2026-02-02T14:00:00.000Z',
-    finishedAt: '2026-02-02T14:01:25.000Z',
-  },
-  {
-    id: 'dep_02',
-    projectId: 'proj_docs_01',
-    status: 'FAILED',
-    commitSha: '5c2e3d1',
-    triggeredBy: 'octocat',
-    createdAt: '2026-02-01T10:10:00.000Z',
-    finishedAt: '2026-02-01T10:11:05.000Z',
-  },
-  {
-    id: 'dep_03',
-    projectId: 'proj_portfolio_02',
-    status: 'READY',
-    commitSha: '9e4f1a2',
-    triggeredBy: 'alex-developer',
-    createdAt: '2026-02-02T11:20:00.000Z',
-    finishedAt: '2026-02-02T11:22:10.000Z',
-  },
-]
-
-export const initialLogs = {
-  dep_01: [
-    { id: 1, deploymentId: 'dep_01', line: '[build] Cloning repository https://github.com/octocat/docs-site...', createdAt: '2026-02-02T14:00:05.000Z' },
-    { id: 2, deploymentId: 'dep_01', line: '[build] Checked out commit 7a1b8c9', createdAt: '2026-02-02T14:00:08.000Z' },
-    { id: 3, deploymentId: 'dep_01', line: '[build] Running build command: npm run build', createdAt: '2026-02-02T14:00:12.000Z' },
-    { id: 4, deploymentId: 'dep_01', line: '[vite] transforming...', createdAt: '2026-02-02T14:00:35.000Z' },
-    { id: 5, deploymentId: 'dep_01', line: '[vite] ✓ built in 1.25s', createdAt: '2026-02-02T14:00:45.000Z' },
-    { id: 6, deploymentId: 'dep_01', line: '[deploy] Assets placed in dist/', createdAt: '2026-02-02T14:01:10.000Z' },
-    { id: 7, deploymentId: 'dep_01', line: '[deploy] Site live at http://docs-site.localhost:8000', createdAt: '2026-02-02T14:01:25.000Z' },
-  ],
-  dep_02: [
-    { id: 1, deploymentId: 'dep_02', line: '[build] Cloning repository https://github.com/octocat/docs-site...', createdAt: '2026-02-01T10:10:05.000Z' },
-    { id: 2, deploymentId: 'dep_02', line: '[build] Checked out commit 5c2e3d1', createdAt: '2026-02-01T10:10:10.000Z' },
-    { id: 3, deploymentId: 'dep_02', line: '[build] Running build command: npm run build', createdAt: '2026-02-01T10:10:15.000Z' },
-    { id: 4, deploymentId: 'dep_02', line: '[error] src/components/Header.jsx: Unterminated string constant', createdAt: '2026-02-01T10:10:45.000Z' },
-    { id: 5, deploymentId: 'dep_02', line: '[build] Process exited with status code 1', createdAt: '2026-02-01T10:11:05.000Z' },
-  ],
-  dep_03: [
-    { id: 1, deploymentId: 'dep_03', line: '[build] Cloning repository https://github.com/octocat/portfolio...', createdAt: '2026-02-02T11:20:05.000Z' },
-    { id: 2, deploymentId: 'dep_03', line: '[build] Checked out commit 9e4f1a2', createdAt: '2026-02-02T11:20:12.000Z' },
-    { id: 3, deploymentId: 'dep_03', line: '[build] Running build command: npm run build', createdAt: '2026-02-02T11:20:30.000Z' },
-    { id: 4, deploymentId: 'dep_03', line: '[deploy] Site live at http://portfolio-app.localhost:8000', createdAt: '2026-02-02T11:22:10.000Z' },
-  ],
+    createdAt: new Date().toISOString(),
+  }
+  projects.push(project)
+  members.push({ id: Math.max(...members.map((m) => m.id)) + 1, projectId: project.id, userId, role: 'OWNER' })
+  return project
 }
 
+// GET /api/projects/:id -> project + members (each with its user)
+export function getProject(projectId) {
+  advanceSimulatedDeployments() // so activeDeploymentId is up to date
+  const project = projects.find((p) => p.id === Number(projectId))
+  if (!project) return null
+  return {
+    ...project,
+    members: members
+      .filter((m) => m.projectId === project.id)
+      .map((m) => {
+        const { id, username, avatarUrl } = findUser(m.userId)
+        return { ...m, user: { id, username, avatarUrl } }
+      }),
+  }
+}
+
+// My role in a project, or null if I'm not a member (the server would answer 403).
+export function getRole(projectId, userId = me.id) {
+  return members.find((m) => m.projectId === Number(projectId) && m.userId === userId)?.role ?? null
+}
+
+// ---------------------------------------------------------------
+// Fake build worker: deployments listed here move forward on their own,
+// like the real worker would: QUEUED (0-3 s) -> BUILDING (3-10 s) -> READY.
+// Projects with "broken" in the name end as FAILED instead.
+// ---------------------------------------------------------------
+const QUEUED_MS = 3000
+const BUILD_MS = 10000
+const simulated = new Map() // deploymentId -> { startedAt (ms), emitted (log lines written so far) }
+
+// The fake build output: [ms after queueing, text]. Lines appear once their time has passed.
+function buildScript(project, deployment) {
+  const common = [
+    [3000, `Cloning ${project.repoUrl} (depth 1)...`],
+    [3600, `HEAD is now at ${deployment.commitSha}`],
+    [4200, '$ npm install'],
+    [5500, 'added 214 packages, and audited 215 packages in 6s'],
+    [6000, 'found 0 vulnerabilities'],
+    [6500, `$ ${project.buildCommand}`],
+    [7200, '> vite build'],
+    [7800, 'vite v8.3.5 building for production...'],
+    [8600, '✓ 32 modules transformed.'],
+  ]
+  if (project.name.includes('broken')) {
+    return common.concat([
+      [9200, 'error during build:'],
+      [9400, '[vite]: Rollup failed to resolve import "./Header" from "src/App.jsx".'],
+      [9800, 'Build failed: command exited with code 1'],
+      [10000, `Deployment #${deployment.id} FAILED`],
+    ])
+  }
+  return common.concat([
+    [9200, `${project.outputDir}/index.html                 0.45 kB`],
+    [9500, '✓ built in 1.62s'],
+    [9800, `Copied ${project.outputDir}/ to deployments/${deployment.id}/`],
+    [10000, `Deployment #${deployment.id} is READY`],
+  ])
+}
+
+function advanceSimulatedDeployments() {
+  const now = Date.now()
+  for (const [id, sim] of simulated) {
+    const deployment = deployments.find((d) => d.id === id)
+    const project = projects.find((p) => p.id === deployment.projectId)
+    const elapsed = now - sim.startedAt
+    if (elapsed < QUEUED_MS) continue
+
+    deployment.commitSha ??= Math.random().toString(16).slice(2, 9)
+
+    // Write every log line whose time has come.
+    const script = buildScript(project, deployment)
+    while (sim.emitted < script.length && script[sim.emitted][0] <= elapsed) {
+      const [at, line] = script[sim.emitted]
+      logs.push({ id: Math.max(...logs.map((l) => l.id)) + 1, deploymentId: id, line, createdAt: new Date(sim.startedAt + at).toISOString() })
+      sim.emitted++
+    }
+
+    if (elapsed < BUILD_MS) {
+      deployment.status = 'BUILDING'
+      continue
+    }
+    // Every fake build "takes" BUILD_MS, counted from when the deployment was created.
+    deployment.finishedAt = new Date(new Date(deployment.createdAt).getTime() + BUILD_MS).toISOString()
+    if (project.name.includes('broken')) {
+      deployment.status = 'FAILED'
+    } else {
+      deployment.status = 'READY'
+      project.activeDeploymentId = deployment.id
+    }
+    simulated.delete(id)
+  }
+}
+
+// The two unfinished sample deployments (todo-app) run soon after page load,
+// one after the other like the real worker (one build at a time):
+// #4 is half-way through its build, #5 waits in the queue and starts when #4 is done.
+const pageLoadedAt = Date.now()
+const startSample = (id, startedAt) => {
+  deployments.find((d) => d.id === id).createdAt = new Date(startedAt).toISOString()
+  simulated.set(id, { startedAt, emitted: 0 })
+}
+startSample(4, pageLoadedAt - 5000) // building now, READY 5 s after load
+startSample(5, pageLoadedAt + 2000) // QUEUED until #4 finishes, READY 12 s after load
+
+// POST /api/projects/:id/deployments -> new QUEUED deployment
+export function addDeployment(projectId, userId = me.id) {
+  const deployment = {
+    id: Math.max(...deployments.map((d) => d.id)) + 1,
+    projectId: Number(projectId),
+    status: 'QUEUED',
+    commitSha: null,
+    triggeredBy: userId,
+    createdAt: new Date().toISOString(),
+    finishedAt: null,
+  }
+  deployments.push(deployment)
+  simulated.set(deployment.id, { startedAt: Date.now(), emitted: 0 })
+  return { ...deployment }
+}
+
+// GET /api/projects/:id/deployments -> newest first
+export function getDeployments(projectId) {
+  advanceSimulatedDeployments()
+  return deployments
+    .filter((d) => d.projectId === Number(projectId))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .map((d) => ({ ...d }))
+}
+
+// GET /api/deployments/:id/logs?after=<logId> -> oldest first
+export function getLogs(deploymentId, after = 0) {
+  advanceSimulatedDeployments()
+  return logs
+    .filter((l) => l.deploymentId === Number(deploymentId) && l.id > Number(after))
+    .map((l) => ({ ...l }))
+}
+
+// Which project a deployment belongs to (the real API checks membership this way).
+export const getDeploymentProjectId = (deploymentId) =>
+  deployments.find((d) => d.id === Number(deploymentId))?.projectId ?? null
+
+// ---------------------------------------------------------------
+// Team members and rollback
+// ---------------------------------------------------------------
+
+const memberWithUser = (m) => {
+  const { id, username, avatarUrl } = findUser(m.userId)
+  return { ...m, user: { id, username, avatarUrl } }
+}
+
+// POST /api/projects/:id/members -> new member (with user).
+// A username that has never logged in gets a user row now, so they see
+// the project on their first login (open question for Role B).
+export function addMember(projectId, username, role) {
+  let user = users.find((u) => u.username.toLowerCase() === username.toLowerCase())
+  if (!user) {
+    const id = Math.max(...users.map((u) => u.id)) + 1
+    user = { id, githubId: 1000 + id, username, avatarUrl: fakeAvatar(username, id), createdAt: new Date().toISOString() }
+    users.push(user)
+  }
+  if (members.some((m) => m.projectId === Number(projectId) && m.userId === user.id)) return null
+  const member = { id: Math.max(...members.map((m) => m.id)) + 1, projectId: Number(projectId), userId: user.id, role }
+  members.push(member)
+  return memberWithUser(member)
+}
+
+export const findMember = (projectId, memberId) =>
+  members.find((m) => m.id === Number(memberId) && m.projectId === Number(projectId)) ?? null
+
+export const countOwners = (projectId) =>
+  members.filter((m) => m.projectId === Number(projectId) && m.role === 'OWNER').length
+
+// PATCH /api/projects/:id/members/:memberId -> updated member
+export function updateMemberRole(member, role) {
+  member.role = role
+  return memberWithUser(member)
+}
+
+// DELETE /api/projects/:id/members/:memberId
+export function deleteMember(member) {
+  members.splice(members.indexOf(member), 1)
+}
+
+// POST /api/projects/:id/rollback -> updated project (with members)
+export function setActiveDeployment(projectId, deploymentId) {
+  const deployment = deployments.find((d) => d.id === Number(deploymentId) && d.projectId === Number(projectId))
+  if (!deployment || deployment.status !== 'READY') return null
+  projects.find((p) => p.id === Number(projectId)).activeDeploymentId = deployment.id
+  return getProject(projectId)
+}
+
+// DELETE /api/projects/:id -> removes the project and everything that belongs to it
+export function deleteProject(projectId) {
+  const id = Number(projectId)
+  const deploymentIds = deployments.filter((d) => d.projectId === id).map((d) => d.id)
+  const keep = (list, test) => list.splice(0, list.length, ...list.filter(test))
+  keep(logs, (l) => !deploymentIds.includes(l.deploymentId))
+  keep(deployments, (d) => d.projectId !== id)
+  keep(members, (m) => m.projectId !== id)
+  keep(projects, (p) => p.id !== id)
+  deploymentIds.forEach((d) => simulated.delete(d))
+}
