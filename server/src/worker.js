@@ -133,32 +133,82 @@ async function processDeployment(deployment) {
       // Continue if rev-parse had non-fatal issue
     }
 
-    // Step 3: npm install
-    await log('[build] Installing dependencies: npm install...')
-    await runCommand('npm', ['install'], workDir, log)
-
-    // Step 4: Build command
-    const rawBuildCmd = project.buildCommand || 'npm run build'
-    await log(`[build] Running build command: ${rawBuildCmd}...`)
-
-    const cmdParts = rawBuildCmd.trim().split(/\s+/)
-    const mainCmd = cmdParts[0]
-    const cmdArgs = cmdParts.slice(1)
-
-    await runCommand(mainCmd, cmdArgs, workDir, log)
-
-    // Step 5: Copy built assets to deployments/<id>/
-    const outputFolder = project.outputDir || 'dist'
-    const fullOutputPath = path.join(workDir, outputFolder)
-
-    if (!existsSync(fullOutputPath)) {
+    // Step 2.5: Verify repository is not empty
+    const clonedFiles = (await fs.readdir(workDir)).filter((f) => f !== '.git')
+    if (clonedFiles.length === 0) {
       throw new Error(
-        `Build finished, but output directory "${outputFolder}" was not found in ${workDir}. Verify project outputDir setting.`
+        `Repository "${project.repoUrl}" appears to be empty. Please commit and push your project files (such as index.html or a React/Vite app) before deploying.`
       )
     }
 
-    await log(`[deploy] Copying built assets from ${outputFolder}/ to deployments/${id}/...`)
-    await fs.cp(fullOutputPath, targetDir, { recursive: true })
+    // Step 3: Check for package.json
+    const pkgPath = path.join(workDir, 'package.json')
+    const hasPackageJson = existsSync(pkgPath)
+
+    if (hasPackageJson) {
+      await log('[build] Installing dependencies: npm install...')
+      await runCommand('npm', ['install'], workDir, log)
+
+      // Step 4: Build command
+      const rawBuildCmd = (project.buildCommand || 'npm run build').trim()
+      let shouldRunBuild = false
+
+      try {
+        const pkgContent = JSON.parse(await fs.readFile(pkgPath, 'utf-8'))
+        const runMatch = rawBuildCmd.match(/^npm\s+run\s+(\S+)$/)
+
+        if (runMatch) {
+          const scriptName = runMatch[1]
+          if (pkgContent.scripts && pkgContent.scripts[scriptName]) {
+            shouldRunBuild = true
+          } else {
+            await log(
+              `[build] Script "${scriptName}" is not defined in package.json. Skipping build command.`
+            )
+          }
+        } else if (rawBuildCmd) {
+          shouldRunBuild = true
+        }
+      } catch {
+        shouldRunBuild = Boolean(rawBuildCmd)
+      }
+
+      if (shouldRunBuild) {
+        await log(`[build] Running build command: ${rawBuildCmd}...`)
+        const cmdParts = rawBuildCmd.split(/\s+/)
+        const mainCmd = cmdParts[0]
+        const cmdArgs = cmdParts.slice(1)
+        await runCommand(mainCmd, cmdArgs, workDir, log)
+      }
+    } else {
+      await log(
+        '[build] No package.json detected. Treating as static site (skipping npm install & build).'
+      )
+    }
+
+    // Step 5: Copy built assets to deployments/<id>/
+    const outputFolder = project.outputDir || 'dist'
+    let fullOutputPath = path.join(workDir, outputFolder)
+
+    if (!existsSync(fullOutputPath)) {
+      // Fallback: check if index.html exists in root
+      if (existsSync(path.join(workDir, 'index.html'))) {
+        await log(
+          `[deploy] Output directory "${outputFolder}" not found, but root index.html found. Using root as deployment assets.`
+        )
+        fullOutputPath = workDir
+      } else {
+        throw new Error(
+          `Build finished, but output directory "${outputFolder}" was not found in ${workDir}. Verify project outputDir setting or ensure an index.html exists.`
+        )
+      }
+    }
+
+    await log(`[deploy] Copying built assets to deployments/${id}/...`)
+    await fs.cp(fullOutputPath, targetDir, {
+      recursive: true,
+      filter: (src) => !src.includes('.git') && !src.includes('node_modules'),
+    })
 
     // Step 6: Mark READY and activate deployment on project
     const finishedAt = new Date()

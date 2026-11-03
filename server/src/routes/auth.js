@@ -49,6 +49,16 @@ router.get('/github', async (req, res) => {
 })
 
 /**
+ * GET /auth/callback (Safeguard)
+ * In case a client callback request lands on port 5000 directly, redirect to the client on port 5173
+ */
+router.get('/callback', (req, res) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
+  const qs = new URLSearchParams(req.query).toString()
+  res.redirect(`${clientUrl}/auth/callback${qs ? `?${qs}` : ''}`)
+})
+
+/**
  * GET /auth/github/callback
  * Exchanges authorization code for an access token, fetches profile,
  * upserts user in DB, signs 7-day JWT, and redirects to client.
