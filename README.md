@@ -99,31 +99,46 @@ Owner, Developer or Viewer, and fake builds run through Queued → Building → 
 
 ### 3. Server (API port 5000, site server port 8000)
 
-> ⚠️ **To confirm with Role B:** the variable names and commands below follow the PRD; check them
-> against `/server/.env.example` and `/server/package.json`.
-
 1. Create a **GitHub OAuth App** (GitHub → Settings → Developer settings → OAuth Apps):
    - Homepage URL: `http://localhost:5173`
    - Authorization callback URL: `http://localhost:5000/auth/github/callback`
-2. Set up the server:
+2. Set up the server and create the database tables:
 
 ```bash
 cd server
 npm install
 cp .env.example .env
-npx prisma migrate dev
+npm run db:push
+```
+
+| Variable | Example | What it is |
+|---|---|---|
+| `PORT` | `5000` | API port |
+| `SITE_PORT` | `8000` | Site server port (serves `<name>.localhost`) |
+| `CLIENT_URL` | `http://localhost:5173` | Where to send users back after login |
+| `DATABASE_URL` | `postgresql://postgres:…@db.….supabase.co:5432/postgres` | Supabase → Project Settings → Database → Connection string (URI) |
+| `JWT_SECRET` | any long random string | Signs login tokens. Change the example value |
+| `GITHUB_CLIENT_ID` | | From your GitHub OAuth App |
+| `GITHUB_CLIENT_SECRET` | | From your GitHub OAuth App (never commit it) |
+| `GITHUB_CALLBACK_URL` | `http://localhost:5000/auth/github/callback` | Must match the OAuth App |
+
+3. Start the three server processes, each in its own terminal:
+
+```bash
 npm run dev
 ```
 
-| Variable | What it is |
-|---|---|
-| `DATABASE_URL` | Supabase PostgreSQL connection string |
-| `GITHUB_CLIENT_ID` | From your GitHub OAuth App |
-| `GITHUB_CLIENT_SECRET` | From your GitHub OAuth App (never commit it) |
-| `JWT_SECRET` | Any long random string |
-| `CLIENT_URL` | `http://localhost:5173`, where to send users back after login |
+```bash
+npm run worker
+```
 
-3. In `client/.env`, set `VITE_USE_MOCKS=false` and restart the client.
+```bash
+npm run site
+```
+
+`dev` is the API (5000), `worker` builds queued deployments, and `site` serves the live sites (8000).
+
+4. In `client/.env`, set `VITE_USE_MOCKS=false` and restart the client.
 
 ### 4. Try the demo flow
 

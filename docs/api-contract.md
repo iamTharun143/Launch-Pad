@@ -83,3 +83,28 @@ All error responses across all routes return:
 }
 ```
 With HTTP status codes `400` (Bad Request), `401` (Unauthorized), `403` (Forbidden), `404` (Not Found), or `500` (Internal Server Error).
+
+---
+
+## Client notes (Role A)
+
+How the client (`client/src/api.js`) reads these responses, and two open items for Role B.
+
+- `GET /api/projects/:id` → `{ project, members }` is flattened to `{ ...project, members }`.
+- `GET /api/deployments/:id/logs` → only `logs` is used; status comes from the deployments list.
+- `POST /api/projects/:id/rollback` → `project` is merged into the page's project (members kept).
+- `GET /api/projects` has no deployment info, so the client asks each project for
+  `GET /api/projects/:id/deployments` to show the newest status on the Dashboard.
+  *Nice to have:* the server could include `latestDeployment: { id, status }` per project instead.
+- Ids are compared as text (UUIDs). `triggeredBy` is shown as-is (it holds the username).
+
+**Open items for Role B**
+
+1. **Invite route path:** `server/src/routes/projects.js` declares `router.post('/api/projects/:id/members', …)`
+   on a router mounted at `/api`, so the real path is `/api/api/projects/:id/members` and the client's
+   `POST /api/projects/:id/members` gets 404. Dropping the leading `/api` fixes it.
+2. **`POST /auth/dev-token`** issues a valid JWT for any username. Fine for local testing; it should be
+   disabled outside development before the server is hosted anywhere.
+3. **Last Owner:** PATCH/DELETE members don't stop the only Owner from being demoted or removed.
+   (The UI already prevents changing your own row.)
+
