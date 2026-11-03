@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { API_URL, USE_MOCKS, getToken } from '../api.js'
 import Logo from '../components/Logo.jsx'
 import { users as mockUsers } from '../mocks/data.js'
@@ -10,8 +10,17 @@ import { usePageTitle } from '../usePageTitle.js'
 const githubLoginUrl = `${API_URL}/auth/github`
 const mockLoginUrl = (userId) => `/auth/callback?token=mock-token-${userId}`
 
+// When GitHub login fails, the API sends the user back to /login?error=<code>.
+const LOGIN_ERRORS = {
+  missing_code: 'GitHub did not send a login code back. Please try again.',
+  oauth_exchange_failed: 'GitHub refused the login. Check the OAuth App settings and try again.',
+  authentication_failed: 'Login failed on the server. Please try again.',
+}
+
 export default function Login() {
   usePageTitle('Log in')
+  const [searchParams] = useSearchParams()
+  const errorCode = searchParams.get('error')
   // Already logged in? No need to see this page.
   if (getToken()) return <Navigate to="/dashboard" replace />
 
@@ -22,6 +31,12 @@ export default function Login() {
         <p className="mt-4 text-gray-600">
           One click turns a GitHub project into a live website, with teams, roles and live build logs.
         </p>
+
+        {errorCode && (
+          <p role="alert" className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {LOGIN_ERRORS[errorCode] ?? 'Login failed. Please try again.'}
+          </p>
+        )}
 
         {USE_MOCKS ? (
           <div className="mt-6 space-y-2">

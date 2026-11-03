@@ -86,7 +86,19 @@ export async function getProjects() {
     return mock.getMyProjects(mockUserId())
   }
   const { data } = await api.get('/api/projects')
-  return data
+  // The server's list has no deployment info, so ask each project for its newest
+  // deployment (one small request per project) to fill the Dashboard status badge.
+  return Promise.all(
+    data.map(async (project) => {
+      try {
+        const { data: deployments } = await api.get(`/api/projects/${project.id}/deployments`)
+        const latest = deployments[0]
+        return { ...project, latestDeployment: latest ? { id: latest.id, status: latest.status } : null }
+      } catch {
+        return { ...project, latestDeployment: null }
+      }
+    }),
+  )
 }
 
 // POST /api/projects  body: { name, repoUrl, buildCommand, outputDir }
@@ -112,7 +124,8 @@ export async function getProject(id) {
     return project
   }
   const { data } = await api.get(`/api/projects/${id}`)
-  return data
+  // The server answers { project, members }; pages use one object: { ...project, members }.
+  return { ...data.project, members: data.members }
 }
 
 // GET /api/projects/:id/deployments -> newest first
@@ -149,7 +162,8 @@ export async function getLogs(deploymentId, after = 0) {
     return mock.getLogs(deploymentId, after)
   }
   const { data } = await api.get(`/api/deployments/${deploymentId}/logs`, { params: { after } })
-  return data
+  // The server answers { logs, status }; the log viewer only needs the lines.
+  return data.logs
 }
 
 // Mock-only: the same permission checks the real server does.
@@ -160,7 +174,7 @@ function mockRequireRole(projectId, allowed, message) {
 
 const ROLES = ['OWNER', 'DEVELOPER', 'VIEWER']
 
-// POST /api/projects/:id/rollback  body: { deploymentId } -> updated project
+// POST /api/projects/:id/rollback  body: { deploymentId } -> updated project (without members)
 export async function rollback(projectId, deploymentId) {
   if (USE_MOCKS) {
     await delay(400)
@@ -170,7 +184,8 @@ export async function rollback(projectId, deploymentId) {
     return project
   }
   const { data } = await api.post(`/api/projects/${projectId}/rollback`, { deploymentId })
-  return data
+  // The server answers { project, message }.
+  return data.project
 }
 
 // POST /api/projects/:id/members  body: { username, role } -> new member (with user)

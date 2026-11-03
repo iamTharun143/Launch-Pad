@@ -121,8 +121,10 @@ export default function ProjectDetail() {
     setRollingBackId(deployment.id)
     setRollbackError('')
     try {
-      // The server answers with the updated project (new activeDeploymentId).
-      setProject(await rollback(id, deployment.id))
+      // The server answers with the updated project (new activeDeploymentId) but not
+      // its members, so keep the members we already have.
+      const updated = await rollback(id, deployment.id)
+      setProject((prev) => ({ ...prev, ...updated }))
     } catch (err) {
       setRollbackError(getErrorMessage(err))
     } finally {
@@ -133,12 +135,14 @@ export default function ProjectDetail() {
   if (loading) return <DetailSkeleton />
   if (error) return <ErrorState {...describeLoadError(error, 'Could not load this project')} onRetry={retry} />
 
-  // triggeredBy is a user id; show the member's username when we know it.
-  const usernameOf = (userId) => project.members.find((m) => m.user.id === userId)?.user.username ?? `user #${userId}`
+  // The real server stores the username in triggeredBy; the mock stores a user id. Handle both.
+  const usernameOf = (triggeredBy) =>
+    project.members.find((m) => m.user.id === triggeredBy)?.user.username ?? String(triggeredBy)
 
   // The one from ?deployment=, or the newest if that's missing or unknown.
   const selected =
-    deployments.find((d) => d.id === Number(searchParams.get('deployment'))) ?? deployments[0] ?? null
+    // Compare as text: real ids are UUID strings, mock ids are numbers.
+    deployments.find((d) => String(d.id) === searchParams.get('deployment')) ?? deployments[0] ?? null
 
   return (
     <div>
