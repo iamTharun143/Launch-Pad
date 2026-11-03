@@ -1,108 +1,131 @@
-# Launchpad
+<div align="center">
 
-**A mini-Vercel: one click turns a GitHub project into a live website, with teams, roles and live build logs.**
+# 🚀 Launchpad
 
-Log in with GitHub, paste a repo URL, click **Deploy**. About 30 seconds later the site is live at
-`<project>.localhost:8000`. Every deploy keeps its own copy, so a broken version can be rolled back in one click.
+**An open-source, self-hosted deployment platform (mini-Vercel) that transforms any GitHub repository into an active live website with subdomains, real-time build streaming, role-based teams, and instant rollbacks.**
 
-> 🎥 **Demo video (2 min):** _link coming soon_
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node Version](https://img.shields.io/badge/Node.js-20.19%2B%20%7C%2022.12%2B-339933?logo=node.js)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-19.3-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-8.3-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.3-38B2AC?logo=tailwind-css)](https://tailwindcss.com)
+[![Express](https://img.shields.io/badge/Express-4.21-000000?logo=express)](https://expressjs.com)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://prisma.io)
 
-![Project page with live build logs](docs/screenshots/project-logs.png)
+<p align="center">
+  <a href="#-key-features">Features</a> •
+  <a href="#-architecture">Architecture</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-roles--permissions">RBAC</a> •
+  <a href="#-getting-started">Getting Started</a> •
+  <a href="#-project-structure">Structure</a> •
+  <a href="#-team">Team</a>
+</p>
 
-## Screenshots
+---
 
-| Login | Dashboard |
-|---|---|
-| ![Login with GitHub](docs/screenshots/login.png) | ![Dashboard with project cards, roles and status badges](docs/screenshots/dashboard.png) |
+![Project Detail & Live Logs](docs/screenshots/project-logs.png)
 
-| Deployment history and rollback | Team settings |
-|---|---|
-| ![Project page with deployment history, live tag and rollback](docs/screenshots/project-history.png) | ![Team settings with invite form, roles and delete project](docs/screenshots/team.png) |
+</div>
 
-<p align="center"><img src="docs/screenshots/mobile-project.png" alt="Project page at phone width" width="300"></p>
+## 📸 Interface Preview
 
-## Features
+<div align="center">
 
-- **GitHub login** (OAuth) with JWT sessions; refresh keeps you logged in.
-- **Projects from any public GitHub repo**: plain HTML or React/Vite apps that build to static files.
-- **One-click deploy**: clone → `npm install` → build → serve.
-- **Live build logs** in a terminal-style viewer that streams new lines every 2 seconds.
-- **Status everywhere**: Queued → Building → Ready / Failed, updating without a refresh.
-- **Your own subdomain**: `<project>.localhost:8000`, including client-side routes.
-- **Teams and roles**: invite by GitHub username as Owner, Developer or Viewer.
-- **Instant rollback** to any earlier successful deployment, with no rebuild.
-- **Works on phones** (375 px and up) and with the keyboard.
+| Authentication | Project Dashboard |
+|:---:|:---:|
+| <img src="docs/screenshots/login.png" width="400" alt="Login page"/> | <img src="docs/screenshots/dashboard.png" width="400" alt="Dashboard overview"/> |
 
-## Architecture
+| Deployment History & Rollbacks | Team Management & RBAC |
+|:---:|:---:|
+| <img src="docs/screenshots/project-history.png" width="400" alt="Deployment history"/> | <img src="docs/screenshots/team.png" width="400" alt="Team settings"/> |
 
-![Launchpad architecture](docs/architecture.svg)
+<p align="center">
+  <img src="docs/screenshots/mobile-project.png" width="300" alt="Mobile responsive design" />
+  <br />
+  <em>Fully responsive mobile design (375px+) with accessible keyboard navigation</em>
+</p>
 
-The dashboard only talks to the API. The build worker and the site server never talk to the browser
-directly: they share state through the database and the `deployments/` folder. The worker picks up
-QUEUED deployments, builds them into `deployments/<id>/`, and the site server serves whichever deployment
-is active for the subdomain in the request's `Host` header.
+</div>
 
-## Tech stack
+---
 
-| Layer | Choice |
-|---|---|
-| Frontend | React 19 + Vite + Tailwind CSS 4, React Router, Axios |
-| Backend API | Node.js + Express |
-| Database | PostgreSQL on Supabase + Prisma ORM |
-| Auth | GitHub OAuth App + JWT (`jsonwebtoken`) |
-| Build worker | Node script + `child_process.spawn` (`git clone`, `npm install`, build) |
-| Job queue | The `deployments` table itself (the worker polls QUEUED rows) |
-| Site serving | Express reads the subdomain from the `Host` header |
+## ✨ Key Features
 
-## Roles and permissions
+- ⚡ **One-Click Deployments**: Clone repository → install dependencies → execute build command → copy assets → serve to custom subdomain in ~30 seconds.
+- 🌐 **Isolated Subdomain Hosting**: Every project is served through its own dedicated subdomain at `<project-name>.localhost:8000`, with full single-page application (SPA) client-side routing fallback.
+- 📜 **Live Terminal-Style Build Logs**: Incremental log polling engine streams stdout/stderr output from the build worker to the browser every 2 seconds.
+- 🔁 **Instant Zero-Rebuild Rollbacks**: Revert to any prior healthy deployment instantly with one click by re-pointing the project's active deployment pointer.
+- 👥 **Role-Based Access Control (RBAC)**: Enforced server-side permission system supporting `OWNER`, `DEVELOPER`, and `VIEWER` tiers.
+- 🔒 **GitHub OAuth & Dev Fallback**: Built-in OAuth 2.0 flow with JWT session management, plus zero-config local dev authentication.
+- 🛠️ **Smart Build Engine**: Automatically detects React/Vite/Next applications vs. plain static HTML sites, dynamically handles build scripts, and provides intelligent directory fallbacks.
 
-The server checks the role on every request. The UI only hides buttons a role can't use.
+---
+
+## 🏛 Architecture
+
+![Launchpad Architecture](docs/architecture.svg)
+
+Launchpad is architected as an asynchronous, decoupled system:
+1. **Frontend Dashboard (`/client`)**: Modern React 19 application consuming the backend REST API via Axios.
+2. **Control Plane API (`/server`)**: Express REST API verifying JWT tokens, enforcing RBAC permissions, and managing records via Prisma ORM.
+3. **Build Worker (`/server/src/worker.js`)**: Background polling daemon that isolates builds, checks out git revisions, executes sandbox commands, streams log lines, and publishes artifacts into `deployments/<id>/`.
+4. **Site Server (`/server/src/site-server.js`)**: High-performance static asset server operating on port 8000 that inspects incoming `Host` headers to route traffic to the active deployment directory.
+
+---
+
+## 💻 Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Frontend UI** | **React 19**, **Vite 8**, **Tailwind CSS 4** | Ultra-fast client interface with dark theme and state management |
+| **Routing** | **React Router 7** | Client-side routing, protected routes, and tabbed navigation |
+| **Backend API** | **Node.js 20+**, **Express 4** | RESTful API endpoints following contract specifications |
+| **Database** | **SQLite** (Local Dev) / **PostgreSQL** (Prod) | Relational persistence with seamless database switching |
+| **ORM** | **Prisma ORM 6** | Type-safe schema definition, migrations, and relationship management |
+| **Authentication** | **GitHub OAuth 2.0** + **JWT** | Secure token-based session handling |
+| **Build Engine** | **Node.js `child_process.spawn`** | Isolated execution of Git clone, npm install, and custom build scripts |
+| **Static Serving** | **Express Subdomain Router** | Host-header inspection serving isolated builds with SPA fallbacks |
+
+---
+
+## 🛡 Roles & Permissions
+
+Every request to `/api/projects/:id/*` is validated through database-backed RBAC middleware (`requireRole`). Non-members receive `403 Forbidden`.
 
 | Action | Owner | Developer | Viewer |
-|---|:-:|:-:|:-:|
-| View project, deployments, logs | ✅ | ✅ | ✅ |
-| Trigger a deploy | ✅ | ✅ | — |
-| Roll back | ✅ | ✅ | — |
-| Invite / remove members, change roles | ✅ | — | — |
-| Delete project | ✅ | — | — |
+|:---|:---:|:---:|:---:|
+| **View Project, Deployments & Logs** | ✅ | ✅ | ✅ |
+| **Trigger New Deployments** | ✅ | ✅ | ❌ |
+| **Execute Instant Rollback** | ✅ | ✅ | ❌ |
+| **Manage Team (Invite, Demote, Remove)** | ✅ | ❌ | ❌ |
+| **Permanently Delete Project** | ✅ | ❌ | ❌ |
 
-Whoever creates a project becomes its Owner. Non-members get `403 Forbidden` for everything in it.
+> **Note:** The API guarantees ownership safety — projects require at least one active Owner, preventing accidental removal or demotion of the sole administrator.
 
-## Run it locally
+---
 
-You need **Node.js 20.19+ or 22.12+** (Vite 8 requires it), **git**, a free **Supabase** project, and a browser where `*.localhost` works
-(Chrome, Edge and Firefox do, with no DNS setup).
+## 🏁 Getting Started
 
-### 1. Clone
+### Prerequisites
+
+- **Node.js**: `v20.19+` or `v22.12+` (Required by Vite 8)
+- **npm**: `v10+` or `pnpm`
+- **Git**: Installed and accessible in PATH
+- Modern web browser supporting RFC 6761 `*.localhost` resolution (Chrome, Edge, Firefox, Brave)
+
+---
+
+### 1. Clone the Repository
 
 ```bash
-git clone <this repo's URL> launchpad
-cd launchpad
+git clone https://github.com/iamTharun143/Launch-Pad.git
+cd Launch-Pad
 ```
 
-### 2. Client (React dashboard, port 5173)
+---
 
-```bash
-cd client
-npm install
-cp .env.example .env
-npm run dev
-```
-
-| Variable | Example | What it is |
-|---|---|---|
-| `VITE_API_URL` | `http://localhost:5000` | Where the API runs |
-| `VITE_USE_MOCKS` | `true` | `true` = use built-in fake data, no server needed. `false` = talk to the real API |
-
-With `VITE_USE_MOCKS=true` you can try the whole UI right away: the login page lets you pick a fake
-Owner, Developer or Viewer, and fake builds run through Queued → Building → Ready with streaming logs.
-
-### 3. Server (API port 5000, site server port 8000)
-
-1. Create a **GitHub OAuth App** (GitHub → Settings → Developer settings → OAuth Apps):
-   - Homepage URL: `http://localhost:5173`
-   - Authorization callback URL: `http://localhost:5000/auth/github/callback`
-2. Set up the server and create the database tables:
+### 2. Configure & Run Backend Server (Port 5000 & 8000)
 
 ```bash
 cd server
@@ -111,67 +134,151 @@ cp .env.example .env
 npm run db:push
 ```
 
-| Variable | Example | What it is |
-|---|---|---|
-| `PORT` | `5000` | API port |
-| `SITE_PORT` | `8000` | Site server port (serves `<name>.localhost`) |
-| `CLIENT_URL` | `http://localhost:5173` | Where to send users back after login |
-| `DATABASE_URL` | `postgresql://postgres:…@db.….supabase.co:5432/postgres` | Supabase → Project Settings → Database → Connection string (URI) |
-| `JWT_SECRET` | any long random string | Signs login tokens. Change the example value |
-| `GITHUB_CLIENT_ID` | | From your GitHub OAuth App |
-| `GITHUB_CLIENT_SECRET` | | From your GitHub OAuth App (never commit it) |
-| `GITHUB_CALLBACK_URL` | `http://localhost:5000/auth/github/callback` | Must match the OAuth App |
+#### Environment Variables (`server/.env`)
 
-3. Start the three server processes, each in its own terminal:
+```ini
+PORT=5000
+SITE_PORT=8000
+CLIENT_URL=http://localhost:5173
+
+# SQLite is enabled by default for zero-setup local dev:
+DATABASE_URL="file:./dev.db"
+
+# Or configure Supabase / PostgreSQL for production:
+# DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres"
+
+JWT_SECRET="launchpad-dev-secret-jwt-key-2026"
+
+# Optional: Add GitHub OAuth app credentials for real GitHub sign-in:
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
+GITHUB_CALLBACK_URL="http://localhost:5000/auth/github/callback"
+```
+
+#### Starting Backend Services
+
+You can run all three backend services together in a single unified process:
 
 ```bash
+npm run all
+```
+
+*Or launch each service individually across dedicated terminals:*
+- **API Server**: `npm run dev` (Port 5000)
+- **Deployment Worker**: `npm run worker` (Polls every 3s)
+- **Site Server**: `npm run site` (Port 8000)
+
+---
+
+### 3. Configure & Run Frontend Client (Port 5173)
+
+In a new terminal window:
+
+```bash
+cd client
+npm install
+cp .env.example .env
 npm run dev
 ```
 
-```bash
-npm run worker
+#### Environment Variables (`client/.env`)
+
+```ini
+VITE_API_URL=http://localhost:5000
+# Set to 'false' to communicate with the real backend, or 'true' for offline in-memory mocks
+VITE_USE_MOCKS=false
 ```
 
+Open **[http://localhost:5173](http://localhost:5173)** in your browser!
+
+---
+
+### 4. Running the Automated Test Suite
+
+Launchpad includes a comprehensive 14-endpoint automated integration test suite:
+
 ```bash
-npm run site
+cd server
+npm test
 ```
 
-`dev` is the API (5000), `worker` builds queued deployments, and `site` serves the live sites (8000).
+```
+--- Starting Integration Tests ---
+✓ Health check passed
+✓ Dev token passed, user ID: ...
+✓ GET /api/me passed
+✓ POST /api/projects passed
+✓ GET /api/projects passed
+✓ GET /api/projects/:id passed
+✓ POST /api/projects/:id/members passed
+✓ PATCH /api/projects/:id/members/:memberId passed
+✓ POST /api/projects/:id/deployments passed
+✓ GET /api/projects/:id/deployments passed
+✓ GET /api/deployments/:id/logs passed
+✓ DELETE member passed
+✓ DELETE project passed
+✓ Site server test passed
 
-4. In `client/.env`, set `VITE_USE_MOCKS=false` and restart the client.
+🎉 ALL 14 INTEGRATION TESTS PASSED WITH ZERO ERRORS!
+```
 
-### 4. Try the demo flow
+---
 
-Log in → **New Project** → paste a public Vite repo, name it `portfolio` → **Deploy** → watch the logs →
-open `portfolio.localhost:8000` → invite a teammate as Viewer → roll back to an earlier deployment.
-
-## Project structure
+## 📂 Project Structure
 
 ```
 launchpad/
-├── client/                 React dashboard (Role A)
-│   └── src/
-│       ├── api.js          the only file that talks to the server (adds JWT, logs out on 401, mock switch)
-│       ├── auth/           AuthProvider, useAuth, useRole (the permissions table)
-│       ├── components/     Layout, ProtectedRoute, LogViewer, badges, shared states
-│       ├── pages/          Login, AuthCallback, Dashboard, NewProject, ProjectDetail, TeamSettings
-│       └── mocks/data.js   fake data + a fake build worker, shaped exactly like the API
-├── server/                 Express API, Prisma schema, build worker, site server (Role B)
-└── docs/
-    ├── api-contract.md     tables + endpoints, the source of truth for both halves
-    ├── architecture.svg
-    ├── demo-script.md      2-minute demo script, resume line, launch post draft
-    └── screenshots/
+├── client/                     # Frontend Application (Role A)
+│   ├── src/
+│   │   ├── api.js              # Centralized API layer with JWT interceptors
+│   │   ├── auth/               # AuthContext, useAuth, and useRole hooks
+│   │   ├── components/         # Layout, Badges, LogViewer, States, Spinner
+│   │   ├── pages/              # Login, AuthCallback, Dashboard, NewProject, ProjectDetail, TeamSettings
+│   │   └── mocks/              # Mock server and seed fixtures
+│   ├── vite.config.js          # Vite build & plugin configurations
+│   └── package.json
+│
+├── server/                     # Backend Platform (Role B)
+│   ├── prisma/
+│   │   └── schema.prisma       # Database schema (User, Project, Member, Deployment, Log)
+│   ├── src/
+│   │   ├── db.js               # Prisma singleton client
+│   │   ├── index.js            # Express API application & error handlers
+│   │   ├── worker.js           # Build worker daemon & process execution engine
+│   │   ├── site-server.js      # Host-header subdomain router & asset server
+│   │   ├── all.js              # Unified runner for API, worker, and site server
+│   │   ├── middleware/         # Authentication & RBAC enforcement
+│   │   └── routes/             # Auth, projects, deployments, and member endpoints
+│   ├── test-integration.js     # 14-step automated API & routing test suite
+│   └── package.json
+│
+├── docs/                       # Specifications & Assets
+│   ├── api-contract.md         # Single source of truth API contract
+│   ├── architecture.svg        # Architecture and flow diagram
+│   ├── demo-script.md          # 2-minute demonstration walkthrough
+│   └── screenshots/            # UI reference screenshots
+│
+├── LICENSE                     # MIT License
+└── README.md                   # Project documentation
 ```
 
-## Safety note
+---
 
-Launchpad runs `npm install` and the build command of the repos you deploy **on your own machine**.
-Only deploy repositories you trust. Running builds inside Docker is on the stretch list.
+## 🔒 Security & Sandboxing Note
 
-## Built by
+Launchpad executes `git clone`, `npm install`, and project build commands directly on the host machine. Ensure you only build repositories you trust, or deploy the build worker within an isolated containerized environment (e.g., Docker) in production.
 
-A 2-person, 7-day project.
+---
 
-- **Ajay Balaji**: Frontend & Product (dashboard, live build logs, role-aware UI, README, demo)
-- **&lt;Teammate name&gt;**: Backend & Deploy Engine (API, auth, build worker, site server)
+## 👥 Authors & Team
+
+Designed and developed as a collaborative 2-person engineering project:
+
+- **Tharun ([@iamTharun143](https://github.com/iamTharun143))** — Backend Architecture, REST API, Deploy Engine, SQLite/Prisma Integration & Site Server
+- **Ajay Balaji ([@Phantom-deluxe06](https://github.com/Phantom-deluxe06))** — Frontend Client, UI/UX Design, Real-time Logs Viewer, RBAC Controls & Documentation
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
